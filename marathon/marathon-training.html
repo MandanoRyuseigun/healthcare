@@ -1,0 +1,815 @@
+<title>愛媛マラソン完走プラン</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Noto+Sans+JP:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: race-bib header + knee status + 12-week lane strip, then this week's 7 days, log form, weekly chart, history, full plan, rules */
+:root{
+  --bg:#f3f6f8; --surface:#ffffff; --fg:#14202b; --muted:#5b6b78; --line:#d9e1e7;
+  --accent:#1f5fd1; --accent-soft:#e3ecfb; --bib:#f2c230; --bib-fg:#1a1400;
+  --rehab:#8a9aa8; --base:#5fa392; --build:#5b8fd9; --taper:#a58fd0;
+  --ok:#2f8f5b; --ok-soft:#e2f3e9; --warn:#a8650f; --warn-soft:#fbefdc; --bad:#c23b2e; --bad-soft:#fbe4e1;
+  --display:"Barlow Condensed","Noto Sans JP",system-ui,sans-serif;
+  --body:"Noto Sans JP",system-ui,-apple-system,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e141a; --surface:#16202a; --fg:#e4ebf1; --muted:#93a3b0; --line:#2a3743;
+  --accent:#7aa5ff; --accent-soft:#1c2c45; --bib:#e9bd2f; --bib-fg:#1a1400;
+  --rehab:#7d8d9b; --base:#539685; --build:#5f8fd6; --taper:#9a85c8;
+  --ok:#5cc28a; --ok-soft:#173326; --warn:#e3a157; --warn-soft:#3a2a14; --bad:#f07a6e; --bad-soft:#3d1c19; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e141a; --surface:#16202a; --fg:#e4ebf1; --muted:#93a3b0; --line:#2a3743;
+  --accent:#7aa5ff; --accent-soft:#1c2c45; --bib:#e9bd2f; --bib-fg:#1a1400;
+  --rehab:#7d8d9b; --base:#539685; --build:#5f8fd6; --taper:#9a85c8;
+  --ok:#5cc28a; --ok-soft:#173326; --warn:#e3a157; --warn-soft:#3a2a14; --bad:#f07a6e; --bad-soft:#3d1c19; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.65}
+.wrap{max-width:1040px;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:28px}
+h1,h2,h3{font-family:var(--display);letter-spacing:.01em;text-wrap:balance;margin:0;line-height:1.2}
+h2{font-size:1.6rem}
+h2 small{font-family:var(--body);font-size:.8rem;color:var(--muted);font-weight:400;margin-left:8px}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+section{display:grid;gap:14px;min-width:0}
+
+header{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center}
+.bib{background:var(--bib);color:var(--bib-fg);border-radius:6px;padding:10px 18px 8px;text-align:center;position:relative;min-width:150px}
+.bib::before,.bib::after{content:"";position:absolute;top:8px;width:7px;height:7px;border-radius:50%;background:var(--bg)}
+.bib::before{left:8px}.bib::after{right:8px}
+.bib .lbl{font-size:.7rem;letter-spacing:.14em;font-weight:700}
+.bib .big{font-family:var(--display);font-size:3.4rem;line-height:1;font-weight:700}
+.bib .unit{font-size:.75rem;font-weight:700}
+.hgroup{display:grid;gap:4px;min-width:0}
+.hgroup h1{font-size:2.3rem}
+.meta{display:flex;flex-wrap:wrap;gap:6px 16px;color:var(--muted);font-size:.88rem}
+.meta button{font:inherit;color:var(--accent);background:none;border:none;padding:0;cursor:pointer;text-decoration:underline}
+.settings{display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px}
+
+.knee{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:center;border-radius:8px;padding:12px 16px;border:1px solid var(--line);background:var(--surface)}
+.knee .chip{font-size:.75rem;font-weight:700;letter-spacing:.05em;padding:3px 10px;border-radius:99px;background:var(--line);color:var(--fg);white-space:nowrap}
+.knee .msg{font-size:.92rem;min-width:0}
+.knee .sub{grid-column:2;font-size:.8rem;color:var(--muted)}
+.knee[data-s="ok"]{background:var(--ok-soft);border-color:var(--ok)}.knee[data-s="ok"] .chip{background:var(--ok);color:var(--surface)}
+.knee[data-s="warn"]{background:var(--warn-soft);border-color:var(--warn)}.knee[data-s="warn"] .chip{background:var(--warn);color:var(--surface)}
+.knee[data-s="bad"]{background:var(--bad-soft);border-color:var(--bad)}.knee[data-s="bad"] .chip{background:var(--bad);color:var(--surface)}
+
+.lanes{display:grid;grid-template-columns:repeat(12,1fr);gap:3px}
+.lane{height:34px;border-radius:3px;opacity:.55;display:grid;place-items:center;font-family:var(--mono);font-size:.72rem;color:#fff}
+.lane.past{opacity:.9}.lane.now{opacity:1;outline:2px solid var(--fg);outline-offset:2px}
+.lane[data-p="rehab"],.pill[data-p="rehab"]{background:var(--rehab)}
+.lane[data-p="base"],.pill[data-p="base"]{background:var(--base)}
+.lane[data-p="build"],.pill[data-p="build"]{background:var(--build)}
+.lane[data-p="taper"],.pill[data-p="taper"]{background:var(--taper)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.8rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.day{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;gap:6px;align-content:start;min-width:0}
+.day.today{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.day.key{background:var(--accent-soft)}
+.day .dh{display:flex;justify-content:space-between;align-items:baseline;font-size:.8rem;color:var(--muted)}
+.day .dh b{font-family:var(--display);font-size:1.1rem;color:var(--fg)}
+.day .body{display:grid;gap:4px}
+.day .what{font-size:.85rem;line-height:1.5}
+.day .tag{font-size:.7rem;font-weight:700;letter-spacing:.06em;color:var(--accent)}
+.day .done{font-size:.78rem;color:var(--ok);font-weight:700}
+.weeknote{font-size:.9rem;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px}
+label{display:grid;gap:4px;font-size:.78rem;color:var(--muted);letter-spacing:.03em}
+input,select,textarea{font:inherit;font-size:.95rem;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%}
+textarea{resize:vertical;min-height:38px}
+.full{grid-column:1/-1}
+.exs{display:grid;gap:6px;margin:10px 0 6px}
+.ex{display:grid;grid-template-columns:22px minmax(0,1fr) 72px 60px 56px;gap:6px;align-items:center;font-size:.88rem;color:var(--fg)}
+.ex.head{font-size:.72rem;color:var(--muted)}
+.ex input[type=checkbox]{width:18px;height:18px;padding:0}
+.ex input[type=number]{padding:5px 6px;font-size:.9rem}
+.ex.off .nm{color:var(--muted)}
+.hint{font-size:.75rem;color:var(--muted);letter-spacing:0}
+button.primary{font:inherit;font-weight:700;background:var(--accent);color:var(--surface);border:none;border-radius:6px;padding:9px 18px;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.status{font-size:.85rem;color:var(--muted)}
+
+.chart{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-x:auto}
+.chart svg{display:block;width:100%;min-width:520px;height:auto}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.stat .v{font-family:var(--display);font-size:1.9rem;line-height:1.1}
+.stat .k{font-size:.78rem;color:var(--muted)}
+
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:.83rem}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:.75rem;color:var(--muted);font-weight:500;letter-spacing:.04em;background:var(--surface)}
+tr.cur td{background:var(--accent-soft)}
+td.wk{white-space:nowrap}
+.pill{display:inline-block;font-size:.7rem;font-weight:700;padding:1px 7px;border-radius:99px;color:#fff;white-space:nowrap}
+
+.logs{display:grid;gap:6px}
+.log{display:grid;grid-template-columns:92px 110px 1fr auto;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:.88rem}
+.log .memo{color:var(--muted);min-width:0;overflow-wrap:anywhere}
+.log .kp{font-weight:700}
+.log .kp[data-s="ok"]{color:var(--ok)}.log .kp[data-s="warn"]{color:var(--warn)}.log .kp[data-s="bad"]{color:var(--bad)}
+.wform{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.wrow{display:grid;grid-template-columns:minmax(150px,220px) minmax(0,1fr);gap:10px;align-items:stretch}
+.wchart svg{min-width:0}
+.wlist{display:flex;flex-wrap:wrap;gap:6px}
+.wchip{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:3px 6px 3px 12px;font-size:.82rem}
+.wchip button{font:inherit;font-size:.75rem;background:none;border:none;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:99px}
+.wchip button.arm{color:var(--bad);font-weight:700}
+@media (max-width:760px){.wrow{grid-template-columns:1fr}}
+.kq{margin-top:-18px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px;display:grid;gap:8px}
+.kq-h{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.kq-b{display:grid;grid-template-columns:repeat(auto-fit,minmax(42px,1fr));gap:6px}
+.kq-b button{font-family:var(--mono);font-size:1rem;height:42px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer}
+.kq-b button.sel{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:700}
+.kstrip{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:3px;margin-top:-18px}
+.kc{border-radius:4px;padding:4px 0 3px;text-align:center;background:var(--surface);border:1px solid var(--line);font-size:.62rem;color:var(--muted);line-height:1.25}
+.kc b{display:block;font-family:var(--mono);font-size:.85rem;color:var(--fg)}
+.kc[data-s="ok"]{background:var(--ok-soft);border-color:var(--ok)}.kc[data-s="warn"]{background:var(--warn-soft);border-color:var(--warn)}.kc[data-s="bad"]{background:var(--bad-soft);border-color:var(--bad)}
+.kc.t{outline:2px solid var(--fg);outline-offset:1px}
+.nudge{margin-top:-14px;font-size:.88rem;background:var(--warn-soft);border:1px solid var(--warn);border-radius:8px;padding:8px 14px}
+.nudge ul{margin:0;padding-left:1.2em}
+#strTbl table{min-width:520px}
+.up{color:var(--ok);font-weight:700}
+.ghost{font:inherit;background:none;border:1px solid var(--line);color:var(--muted);border-radius:6px;padding:8px 14px;cursor:pointer}
+.log.editing{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.log .acts{display:flex;gap:6px}
+.log button{font:inherit;font-size:.78rem;background:none;border:1px solid var(--line);color:var(--muted);border-radius:6px;padding:3px 8px;cursor:pointer}
+.log button.arm{border-color:var(--bad);color:var(--bad)}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:8px;padding:18px;color:var(--muted);font-size:.9rem}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.rule{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:.88rem}
+.rule b{display:block;font-size:.95rem;margin-bottom:2px}
+.scale{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.scale>div{border-radius:8px;padding:12px 14px;font-size:.88rem;border:1px solid}
+.scale b{display:block;font-size:1rem}
+.s-ok{background:var(--ok-soft);border-color:var(--ok)}.s-warn{background:var(--warn-soft);border-color:var(--warn)}.s-bad{background:var(--bad-soft);border-color:var(--bad)}
+.foot{font-size:.78rem;color:var(--muted)}
+
+@media (max-width:760px){
+  .days{grid-template-columns:1fr}
+  .day{grid-template-columns:96px 1fr;align-items:start}
+  .day .dh{flex-direction:column;gap:0}
+  header{grid-template-columns:1fr}
+  .bib{justify-self:start}
+  .lanes{gap:2px}.lane{font-size:0}
+  .log{grid-template-columns:80px 1fr auto}.log .memo{grid-column:1/-1}
+  .knee{grid-template-columns:1fr}.knee .sub{grid-column:1}
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="bib" aria-label="レースまでの日数">
+      <div class="lbl">RACE IN</div>
+      <div class="big num" id="countdown">--</div>
+      <div class="unit">DAYS</div>
+    </div>
+    <div class="hgroup">
+      <h1 id="raceTitle">愛媛マラソン完走プラン</h1>
+      <div class="meta">
+        <span id="raceMeta">2027年2月7日（日）10:00スタート ・ 制限6時間（8分32秒/km）</span>
+        <span>鵞足炎からの復帰 ・ ジム毎日1時間 ＋ 屋外 毎週水曜</span>
+        <button type="button" id="editRace">大会名・日付を変更</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="settings" id="settings" hidden>
+    <label style="flex:2 1 200px">大会名<input id="raceName" type="text"></label>
+    <label style="flex:1 1 150px">開催日<input id="raceDate" type="date"></label>
+    <button class="primary" type="button" id="saveRace">保存</button>
+    <span class="status" id="raceStatus"></span>
+  </div>
+
+  <div class="knee" id="knee" data-s="none">
+    <span class="chip" id="kneeChip">ひざ 未記録</span>
+    <span class="msg" id="kneeMsg">練習のあとと翌朝に、ひざ内側の痛みを0〜10で記録すると、ここに進め方の判定が出ます。</span>
+    <span class="sub" id="kneeSub"></span>
+  </div>
+  <div class="kq" id="kq">
+    <div class="kq-h"><b>今朝のひざの痛みは？</b><span class="status" id="kqStatus">数字を押すと、今日の「翌朝チェック」として保存されます（0＝なし、10＝歩けない）</span></div>
+    <div class="kq-b" id="kqBtns"></div>
+  </div>
+  <div class="kstrip" id="kstrip" aria-label="直近14日のひざの痛み"></div>
+  <div class="nudge" id="nudge" hidden></div>
+
+  <section aria-label="12週間の流れ">
+    <div class="lanes" id="lanes"></div>
+    <div class="legend">
+      <span><i style="background:var(--rehab)"></i>復帰期 W1–3：歩きとバイクでひざを慣らす</span>
+      <span><i style="background:var(--base)"></i>基礎期 W4–6：歩きと走りを交ぜる</span>
+      <span><i style="background:var(--build)"></i>構築期 W7–10：距離を伸ばす（最長20km）</span>
+      <span><i style="background:var(--taper)"></i>調整期 W11–12：疲れを抜いて本番へ</span>
+    </div>
+  </section>
+
+  <section>
+    <h2 id="weekTitle">今週のメニュー</h2>
+    <div class="weeknote" id="weekNote"></div>
+    <div class="days" id="days"></div>
+  </section>
+
+  <section>
+    <h2>ジムの筋トレメニュー <small>月＝A、土＝B</small></h2>
+    <div class="weeknote">「15×3」は15回を1セットとして3セット行う意味です（合計45回）。重さは「決めた回数をやって、あと3〜5回できる」くらいの軽さで。どの種目も<b>ひざの内側が痛む角度の手前で止めます</b>。セット間の休みは45〜60秒。<br><b>マットの種目は「できるとき」でOKです。</b>ジムではマシンの種目（アブダクター・レッグエクステンション・カーフプレス・レッグプレス）を優先し、マットが空いていればその場で、空いていなければ帰宅後に自宅の床で行います（道具なしで10分ほど）。どちらもできない日は飛ばしてかまいません。週に2回できれば十分です。</div>
+    <div class="tbl"><table>
+      <thead><tr><th>メニュー</th><th>種目（器具）</th><th>回数×セット</th><th>ポイント</th><th>代わり</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="6"><span class="pill" data-p="rehab">復帰期</span><br><b>筋トレA</b></td><td>アブダクター（脚を外に開くマシン）</td><td class="num">15×3</td><td>お尻の横を鍛える一番大事な種目。ゆっくり開いて2秒で戻す</td><td>横向き脚上げ（マット）</td></tr>
+        <tr><td>ヒップリフト（マット）</td><td class="num">15×3</td><td>両膝は拳1つ分あけ、内側に倒さない</td><td>—</td></tr>
+        <tr><td>レッグエクステンション（エクステンション×カールのマシン）</td><td class="num">15×2</td><td>軽い重さで。伸ばしきって1秒止める。ひざの軸とマシンの回転軸をそろえる</td><td>仰向けで片脚まっすぐ上げ</td></tr>
+        <tr><td>カーフプレス（シーテッドレッグプレス）</td><td class="num">20×2</td><td>ひざを伸ばしたまま、足の指の付け根でプレートを押す。軽い重さで</td><td>壁に手をついて自重で</td></tr>
+        <tr><td>クラムシェル（マット・チューブがあれば膝に）</td><td class="num">15×2</td><td>骨盤が後ろに倒れないように</td><td>—</td></tr>
+        <tr><td>プランク／サイドプランク（マット）</td><td class="num">30秒×2／20秒×2</td><td>腰を反らさない</td><td>膝をついて行う</td></tr>
+        <tr><td rowspan="5"><span class="pill" data-p="rehab">復帰期</span><br><b>筋トレB</b></td><td>アブダクター（マシン）</td><td class="num">15×3</td><td>Aと同じ</td><td>横向き脚上げ</td></tr>
+        <tr><td>シーテッドレッグプレス ※W2から</td><td class="num">15×3</td><td>浅め（膝90度まで）・足は肩幅、膝はつま先と同じ向き。W1は行わない</td><td>椅子から立ち上がる動作</td></tr>
+        <tr><td>バックエクステンション（マット：うつ伏せで上体を起こす）</td><td class="num">12×2</td><td>腕振りと姿勢のための背中。反りすぎない</td><td>上半身のマシンがあればロウ系で</td></tr>
+        <tr><td>デッドバグ（マット）</td><td class="num">10×2（左右）</td><td>腰を床に押しつけたまま手足を伸ばす</td><td>—</td></tr>
+        <tr><td>サイドプランク（マット）</td><td class="num">20秒×2</td><td>体を一直線に</td><td>膝をついて行う</td></tr>
+        <tr><td rowspan="3"><span class="pill" data-p="base">基礎期〜</span><br><b>A・Bに追加</b></td><td>ステップダウン（階段や低い段差）</td><td class="num">10×2（左右）</td><td>片脚でゆっくり降りる。膝が内側に入らないよう鏡で確認</td><td>階段の一段目</td></tr>
+        <tr><td>レッグカール（エクステンション×カールのマシン）</td><td class="num">12×2</td><td>太もも裏は鵞足につながるので、ごく軽い重さから。痛めば中止</td><td>ヒップリフトを片脚で</td></tr>
+        <tr><td>片脚シーテッドレッグプレス</td><td class="num">10×2（左右）</td><td>両脚の半分以下の重さで、浅め。膝が内側に入らないように</td><td>自重スクワット（浅め）</td></tr>
+        <tr><td><b>しばらく避ける</b></td><td colspan="4"><b>ハックスクワット</b>（ひざが深く曲がり負担が大きい。大会まで使わなくてOK）、<b>足踏みするマシン（ステッパー）</b>（曲げ伸ばしのくり返しで鵞足がこすれやすい。痛みが0〜1で落ち着いた構築期以降に10分までなら可）、アブダクターを逆向きにして脚を閉じる使い方、深いスクワットやランジ、ジャンプ系、重いレッグカール。内ももと太もも裏の筋肉は鵞足に付いているので、痛みが0〜1で落ち着くまでは強く使いません。</td></tr>
+        <tr><td><b>毎回のストレッチ</b></td><td colspan="4">太もも裏・内もも・お尻・ふくらはぎ・太もも前を各30秒×2。フォームローラーがあれば太もも前と外側をほぐす（痛む場所に直接は当てない）。</td></tr>
+        <tr><td><b>バイク</b></td><td colspan="4">サドルは、ペダルが一番下のときにひざが軽く曲がる高さ。負荷は軽め、1分間80〜90回転で、会話できる強さ。リカンベント（背もたれ付き）はひざの曲がりが深くなりやすいので、アップライトバイクがおすすめ。ジムの有酸素はバイクとトレッドミルだけで十分です。</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>記録する <small>練習のあと、または翌朝に</small></h2>
+    <form id="logForm">
+      <label>日付<input id="fDate" type="date" required></label>
+      <label>種類
+        <select id="fType">
+          <option>屋外ラン</option><option>屋外ウォーク</option><option>トレッドミル</option><option>筋トレ</option>
+          <option>バイク・クロス</option><option>ストレッチ・休養</option><option>翌朝チェック</option><option>レース</option>
+        </select>
+      </label>
+      <label id="lDist">距離 (km)<input id="fDist" type="number" step="0.1" min="0" inputmode="decimal" placeholder="例：5.0"></label>
+      <label id="lMin">時間 (分)<input id="fMin" type="number" step="1" min="0" inputmode="numeric" placeholder="例：45"></label>
+      <label id="lRpe">きつさ (1–10)<input id="fRpe" type="number" min="1" max="10" step="1" inputmode="numeric" placeholder="5"></label>
+      <label>ひざの痛み (0–10)<input id="fKnee" type="number" min="0" max="10" step="1" inputmode="numeric" placeholder="0＝なし"></label>
+      <div class="full" id="strBox" hidden>
+        <label style="max-width:240px">メニュー<select id="fMenu"><option value="A">筋トレA（月）</option><option value="B">筋トレB（土）</option></select></label>
+        <div class="exs" id="exs"></div>
+        <span class="hint">やった種目にチェックを入れ、重さ・回数・セット数を実際の数字に直してください。重さは前回の記録が自動で入ります。マットの種目は最初チェックが外れています。ジムか自宅でできた日だけチェックを入れてください（重さは空欄のまま）。</span>
+      </div>
+      <label class="full">体調・メモ<textarea id="fMemo" rows="2" placeholder="例：後半にひざ内側が少し張った。階段の下りで違和感なし"></textarea>
+        <span class="hint">痛みは「ひざの内側（すねの上の内側）」の痛みを0（なし）〜10（歩けない）で。</span></label>
+      <div class="full" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <button class="primary" type="submit" id="submitBtn">記録を保存</button>
+        <button type="button" id="cancelEdit" class="ghost" hidden>修正をやめる</button>
+        <span class="status" id="formStatus"></span>
+      </div>
+    </form>
+  </section>
+
+  <section>
+    <h2>体重 <small>朝、トイレの後に。週2〜3回で十分。体脂肪率は同じ体組成計・同じ時間帯で</small></h2>
+    <form id="wForm" class="wform">
+      <label>日付<input id="wDate" type="date" required></label>
+      <label>体重 (kg)<input id="wKg" type="number" min="20" max="200" step="0.1" inputmode="decimal" placeholder="例：68.5" required></label>
+      <label>体脂肪率 (%) ※任意<input id="wFat" type="number" min="3" max="60" step="0.1" inputmode="decimal" placeholder="測れた日だけ"></label>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;align-self:end">
+        <button class="primary" type="submit">体重を保存</button>
+        <span class="status" id="wStatus"></span>
+      </div>
+    </form>
+    <div class="wrow">
+      <div class="stat" id="wStat"><div class="v num">— kg</div><div class="k">まだ記録がありません</div></div>
+      <div class="chart wchart"><svg id="wChart" viewBox="0 0 600 120" role="img" aria-label="体重の推移"></svg></div>
+    </div>
+    <div class="wlist" id="wList"></div>
+  </section>
+
+  <section>
+    <h2>走行距離とひざ <small>週ごと・計画（枠）と実績（塗り）、点はその週のひざの痛みの最大値</small></h2>
+    <div class="stats" id="stats"></div>
+    <div class="chart"><svg id="chart" viewBox="0 0 800 260" role="img" aria-label="週ごとの計画距離と実績距離、ひざの痛み"></svg></div>
+  </section>
+
+  <section>
+    <h2>筋トレの重さ <small>種目ごとの最新と、最初の記録からの変化</small></h2>
+    <div class="tbl" id="strTbl"></div>
+  </section>
+
+  <section>
+    <h2>記録の履歴</h2>
+    <div class="logs" id="logs"><div class="empty">記録を読み込み中です…</div></div>
+  </section>
+
+  <section>
+    <h2>ひざの痛みで進め方を決める</h2>
+    <div class="scale">
+      <div class="s-ok"><b>0〜2：予定どおり</b>練習中も翌朝も痛みが2以下で、前日より悪くなっていなければ、次のメニューへ進みます。</div>
+      <div class="s-warn"><b>3〜4：据え置き</b>その週は前の週と同じ内容をくり返します。ジョグの部分を速歩に置き換えてもかまいません。</div>
+      <div class="s-bad"><b>5以上：走らない</b>走るのはやめて、速歩・バイク・ストレッチだけにします。3日以上続く、腫れる、歩くと痛い場合は整形外科へ。</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>12週間の全体メニュー</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>週</th><th>期</th><th>水 屋外</th><th>火 トレッドミル</th><th>金 トレッドミル</th><th>月・土 筋トレ／クロス</th><th>ポイント</th></tr></thead>
+      <tbody id="planBody"></tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>守ること</h2>
+    <div class="rules">
+      <div class="rule"><b>走るのは週3日まで</b>走るのは火・水・金だけ。ジムに毎日行けても、他の日は筋トレ・バイク・ストレッチで、ひざを休ませながら心肺を鍛えます。</div>
+      <div class="rule"><b>お尻と太もも前を鍛える</b>鵞足炎はひざが内側に入る動きで悪化しやすいので、横向き脚上げ・クラムシェル・ヒップリフトでお尻の横の筋肉を強くします。</div>
+      <div class="rule"><b>太もも裏と内側をほぐす</b>毎日、練習の後に太もも裏と内ももをゆっくり伸ばします。反動はつけず、30秒ずつ。</div>
+      <div class="rule"><b>バイクはサドル高めで</b>ひざの曲がりが深いと鵞足に負担がかかります。脚を下ろしたときにひざが軽く曲がる高さに。痛む日はエリプティカルより先にバイクを。</div>
+      <div class="rule"><b>蹴るときの痛みが戻ったら合図</b>いちばん痛かった時期は、地面を蹴る瞬間に痛みが出ていました。今は痛みがないので普段どおり歩いて大丈夫です。練習中に蹴るときの痛みが戻ったら、そこで歩幅を小さくするかバイクに切り替え、ひざの痛みを3以上として記録します。走り始めるW2〜3は、念のため歩幅を小さめに。</div>
+      <div class="rule"><b>下り坂と急なペースアップを避ける</b>水曜のコースは平らな道を選び、ペースは会話できる速さで。W9以降に本番と同じシューズ・補給食を試します。</div>
+      <div class="rule"><b>体重は週2〜3回、食事は記録しない</b>体重は朝、トイレの後に測った日だけ「体重」の欄に記録します。食事の細かい記録は不要。毎食たんぱく質（肉・魚・卵・大豆）をとり、練習の後は早めに食べ、極端な食事制限はしないこと。</div>
+      <div class="rule"><b>本番は最初から歩きを入れる</b>制限は6時間（8分32秒/km）。「10分走＋1分歩き」で1kmあたり7分45秒前後なら約5時間30分で、関門に余裕を持てます。</div>
+    </div>
+    <p class="foot">このメニューは一般的な目安です。痛みが引かない、または悪化する場合は医師や理学療法士に相談し、その指示を優先してください。大会の関門時刻は大会公式の要項で確認してください。</p>
+  </section>
+</div>
+
+<script>
+(function(){
+  const DEFAULT_RACE = {name:"愛媛マラソン", date:"2027-02-07"};
+  const PHASE_NAME = {rehab:"復帰期", base:"基礎期", build:"構築期", taper:"調整期"};
+  const PLAN = [
+    {p:"rehab", wed:4,  how:"速歩だけ（走らない）", tue:"30分：速歩（傾斜0%）", fri:"30分：速歩（傾斜0%）", note:"3週間休んだ後の最初の週。走らずに、歩いてもひざの内側が痛まないことを確かめます。"},
+    {p:"rehab", wed:5,  how:"速歩＋痛みがなければ1分ジョグ×5", tue:"30分：速歩、最後に1分ジョグ×3", fri:"30分：速歩＋1分ジョグ×5", note:"痛みが2以下なら、ほんの少しだけ走ってみます。痛みが出たら速歩に戻します。"},
+    {p:"rehab", wed:6,  how:"1分走＋3分歩き", tue:"30分：1分ジョグ＋3分ウォーク×7", fri:"30分：1分ジョグ＋3分ウォーク×7", note:"走る時間はまだ全体の4分の1。翌朝のひざの状態を必ず記録します。"},
+    {p:"base",  wed:7,  how:"2分走＋2分歩き", tue:"32分：2分ジョグ＋2分ウォーク×8", fri:"32分：2分ジョグ＋2分ウォーク×8", note:"基礎期。走る時間と歩く時間が半々になります。"},
+    {p:"base",  wed:8,  how:"3分走＋2分歩き", tue:"35分：3分ジョグ＋2分ウォーク×7", fri:"35分：3分ジョグ＋2分ウォーク×7", note:"ここまで痛みが2以下なら、ひざは順調です。筋トレに浅めのスクワットを加えます。"},
+    {p:"base",  wed:6,  how:"3分走＋1分歩き（軽め）", tue:"30分：3分ジョグ＋1分ウォーク", fri:"25分：ジョグ（軽め）", note:"回復週（年末）。距離を減らして、ひざと体を休めます。"},
+    {p:"build", wed:10, how:"5分走＋1分歩き", tue:"40分：5分ジョグ＋1分ウォーク", fri:"40分：5分ジョグ＋1分ウォーク", note:"構築期。初めての10km。タイムは気にせず最後まで動き続けることが目標です。"},
+    {p:"build", wed:13, how:"本番ペースで10分走＋1分歩き", tue:"40分：8分ジョグ＋1分ウォーク", fri:"40分：ジョグ（途中歩きOK）", note:"水曜は本番ペース（1kmあたり7分30秒〜8分）で。給水の練習も始めます。"},
+    {p:"build", wed:16, how:"本番ペースで10分走＋1分歩き", tue:"45分：ジョグ", fri:"40分：ジョグ（軽め）", note:"本番と同じシューズ・ウェアで。ジェルなどの補給食を60分ごとに試します。"},
+    {p:"build", wed:20, how:"本番ペースで10分走＋1分歩き", tue:"40分：ジョグ（軽め）", fri:"30分：ジョグ（軽め）", note:"最長距離の週。2時間40分前後かかる想定です。翌日の木曜は完全休養に。痛みが3以上なら16kmで切り上げます。"},
+    {p:"taper", wed:10, how:"本番ペースで", tue:"35分：ジョグ", fri:"30分：ジョグ＋5分本番ペース", note:"調整期。距離を半分に。睡眠と食事を優先します。"},
+    {p:"taper", wed:4,  how:"ゆっくり、気持ちよく", tue:"20分：ジョグ", fri:"15分：軽いジョグ", note:"レース週。筋トレはお休み。前々日から炭水化物を多めに。スタートは10時なので、朝食は7時ごろまでに。"}
+  ];
+  const N = PLAN.length;
+  const STR = {
+    rehab:{mon:"バイク10分 → 筋トレA（復帰期）→ バイク10分 → ストレッチ", sat:"バイク10分 → 筋トレB（復帰期）→ バイク20分 → ストレッチ"},
+    base:{mon:"バイク10分 → 筋トレA（基礎期〜）→ バイク10分 → ストレッチ", sat:"バイク10分 → 筋トレB（基礎期〜）→ バイク30分 → ストレッチ"},
+    build:{mon:"バイク10分 → 筋トレA（基礎期〜・各2セット）→ ストレッチ", sat:"筋トレB（基礎期〜・各2セット）→ バイク40分 → ストレッチ"},
+    taper:{mon:"バイク20分＋ストレッチ", sat:"ストレッチ・ウォーク20分"}
+  };
+  const DOW = ["日","月","火","水","木","金","土"];
+  const RUN_TYPES = ["屋外ラン","屋外ウォーク","トレッドミル","レース"];
+
+  let race = {...DEFAULT_RACE};
+  let logs = [];
+  let dbRef = null;
+  let armed = null;
+  let dataMsg = "記録を読み込み中です…";
+
+  const $ = id => document.getElementById(id);
+  const pad = n => String(n).padStart(2,"0");
+  const ymd = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+  const parse = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y,m-1,d); };
+  const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+  const monday = d => addDays(d, -((d.getDay()+6)%7));
+  const md = d => (d.getMonth()+1)+"/"+d.getDate();
+  const today = () => { const t = new Date(); return new Date(t.getFullYear(),t.getMonth(),t.getDate()); };
+  const hasKnee = l => typeof l.knee === "number" && !isNaN(l.knee);
+  const kneeState = v => v <= 2 ? "ok" : v <= 4 ? "warn" : "bad";
+
+  function weekStarts(){
+    const raceMon = monday(parse(race.date));
+    return PLAN.map((_,i)=> addDays(raceMon, -(N-1-i)*7));
+  }
+  function currentWeekIndex(){
+    const starts = weekStarts(), t = today();
+    if (t < starts[0]) return -1;
+    if (t > addDays(starts[N-1],6)) return N;
+    for (let i=N-1;i>=0;i--) if (t >= starts[i]) return i;
+    return -1;
+  }
+  function dayMenu(wi, dow, date){
+    const w = PLAN[wi], s = STR[w.p], last = wi===N-1;
+    if (ymd(date) === race.date) return {tag:"本番", what:"42.195km。10時スタート。最初から10分走＋1分歩きで、前半は抑えめに。", key:true};
+    switch(dow){
+      case 1: return {tag:"ジム", what:s.mon};
+      case 2: return {tag:"トレッドミル", what:w.tue};
+      case 3: return {tag: w.p==="rehab" && wi===0 ? "屋外ウォーク" : "屋外ラン", what:`${w.wed}km ・ ${w.how}`, key:true};
+      case 4: return {tag:"回復", what: wi===9 ? "完全休養。朝にひざの痛みを記録" : "朝にひざの痛みを記録。バイク20分（ごく軽く）＋ストレッチ20分"};
+      case 5: return {tag:"トレッドミル", what:w.fri};
+      case 6: return {tag: last?"休養":"ジム", what: last ? "休養。持ち物・ゼッケン・天気を確認" : s.sat};
+      default: return {tag:"休養", what: last ? "休養" : "完全休養（ストレッチのみ）"};
+    }
+  }
+  function plannedRunKm(wi){
+    const w = PLAN[wi];
+    const mins = s => Number((s.match(/^(\d+)分/)||[0,0])[1]);
+    const factor = w.p==="rehab" ? 0.10 : w.p==="base" ? 0.11 : 0.13;
+    return Math.round((w.wed + (mins(w.tue)+mins(w.fri))*factor)*10)/10;
+  }
+  function sortedLogs(){
+    return [...logs].sort((a,b)=> a.date<b.date?1:a.date>b.date?-1:(b.createdAt||0)-(a.createdAt||0));
+  }
+
+  function renderHeader(){
+    const d = parse(race.date);
+    const days = Math.round((d - today())/86400000);
+    $("countdown").textContent = Math.max(0, days);
+    $("raceTitle").textContent = (race.name || "マラソン") + "完走プラン";
+    $("raceMeta").textContent = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${DOW[d.getDay()]}）` + (race.date===DEFAULT_RACE.date ? " 10:00スタート ・ 制限6時間（8分32秒/km）" : " ・ 42.195 km");
+    $("raceName").value = race.name || "";
+    $("raceDate").value = race.date;
+  }
+  function renderKnee(){
+    const t = today(), from = ymd(addDays(t,-3));
+    const recent = sortedLogs().filter(l=>hasKnee(l) && l.date>=from && l.date<=ymd(t));
+    const box = $("knee");
+    if (!recent.length){
+      box.dataset.s = "none";
+      $("kneeChip").textContent = "ひざ 未記録";
+      $("kneeMsg").textContent = "直近3日のひざの痛みの記録がありません。練習のあとと翌朝に、ひざ内側の痛みを0〜10で記録してください。";
+      $("kneeSub").textContent = ""; return;
+    }
+    const worst = Math.max(...recent.map(l=>l.knee));
+    const st = kneeState(worst);
+    box.dataset.s = st;
+    $("kneeChip").textContent = `ひざ ${worst}/10`;
+    $("kneeMsg").textContent = st==="ok" ? "予定どおり進めてOK。" : st==="warn" ? "今週は前の週と同じ内容に据え置き。ジョグを速歩に置き換えても大丈夫です。" : "走るのは中止。速歩・バイク・ストレッチだけにします。3日以上続く・腫れる・歩くと痛む場合は整形外科へ。";
+    const l = recent[0];
+    $("kneeSub").textContent = `直近3日の最大値で判定（最新：${md(parse(l.date))} ${l.type} ${l.knee}/10）`;
+  }
+  function renderLanes(){
+    const ci = currentWeekIndex(), starts = weekStarts();
+    $("lanes").innerHTML = PLAN.map((w,i)=>`<div class="lane ${i<ci?"past":""} ${i===ci?"now":""}" data-p="${w.p}" title="W${i+1} ${md(starts[i])}〜 ${PHASE_NAME[w.p]} 水曜${w.wed}km">W${i+1}</div>`).join("");
+  }
+  function renderWeek(){
+    let ci = currentWeekIndex();
+    const starts = weekStarts();
+    let pre = "";
+    if (ci === -1){
+      const t0 = today(), end = addDays(starts[0],-1);
+      $("weekTitle").innerHTML = `準備期間 <small>${md(t0)}〜${md(end)} ・ W1は ${md(starts[0])}（月）から</small>`;
+      $("weekNote").textContent = "目的は「鍛える」より「今のひざがどこまで平気か」を確かめること。走らず、軽めに終えて、終わった後と翌朝のひざの痛みを記録します。この記録をW1の判断に使います。";
+      const tds = ymd(t0); let html = "";
+      for (let d = new Date(t0); d <= end; d = addDays(d,1)){
+        const dow = d.getDay(), ds = ymd(d);
+        const m = dow===6 ? {tag:"ジム（約50分）", what:"バイク15分（サドル高め・軽い負荷・会話できる強さ）→ 筋トレA（復帰期）を軽めの重さで、どの種目も2セットまで（表の「15×3」なら15回×2セット）→ ストレッチ10分。終わったらひざの痛みを記録"}
+               : dow===0 ? {tag:"ジム（約45分）", what:"朝にひざの痛みを記録 → トレッドミル速歩20〜30分（時速5〜5.5km・傾斜0%）→ バイク10分 → ストレッチ10分。痛みが3以上になったら速歩を止めてバイクに切り替え"}
+               : {tag:"軽め", what:"ストレッチ15分。ひざの痛みを記録"};
+        const dl = logs.filter(l=>l.date===ds), kn = dl.filter(hasKnee).map(l=>l.knee);
+        const done = dl.length ? `<div class="done">✓ 記録あり${kn.length?` ひざ${Math.max(...kn)}`:""}</div>` : "";
+        html += `<div class="day ${ds===tds?"today":""} key"><div class="dh"><b>${DOW[dow]}</b><span class="num">${md(d)}</span></div>
+          <div class="body"><div class="tag">${m.tag}</div><div class="what">${m.what}</div>${done}</div></div>`;
+      }
+      $("days").innerHTML = html; return;
+    }
+    if (ci === N){ $("weekTitle").textContent = "お疲れさまでした"; $("weekNote").textContent = "レースは終わりました。2週間は軽めの運動で体を休めてください。"; $("days").innerHTML=""; return; }
+    const w = PLAN[ci], st = starts[ci];
+    $("weekTitle").innerHTML = `W${ci+1} のメニュー <small>${md(st)}〜${md(addDays(st,6))} ・ ${PHASE_NAME[w.p]}</small>`;
+    $("weekNote").textContent = pre + w.note;
+    const t = ymd(today());
+    let html = "";
+    for (let k=0;k<7;k++){
+      const date = addDays(st,k), dow = date.getDay(), m = dayMenu(ci,dow,date), ds = ymd(date);
+      const dl = logs.filter(l=>l.date===ds);
+      const km = dl.reduce((a,l)=>a+(Number(l.distance)||0),0);
+      const kn = dl.filter(hasKnee).map(l=>l.knee);
+      const done = dl.length ? `<div class="done">✓ 記録あり${km?`（${km.toFixed(1)}km）`:""}${kn.length?` ひざ${Math.max(...kn)}`:""}</div>` : "";
+      html += `<div class="day ${ds===t?"today":""} ${m.key?"key":""}">
+        <div class="dh"><b>${DOW[dow]}</b><span class="num">${md(date)}</span></div>
+        <div class="body"><div class="tag">${m.tag}</div><div class="what">${m.what}</div>${done}</div></div>`;
+    }
+    $("days").innerHTML = html;
+  }
+  function weekLogs(i){
+    const st = weekStarts()[i], a = ymd(st), b = ymd(addDays(st,6));
+    return logs.filter(l=>l.date>=a && l.date<=b);
+  }
+  const weekActual = i => weekLogs(i).filter(l=>RUN_TYPES.includes(l.type)).reduce((s,l)=>s+(Number(l.distance)||0),0);
+  function weekKnee(i){ const k = weekLogs(i).filter(hasKnee).map(l=>l.knee); return k.length ? Math.max(...k) : null; }
+
+  function renderChart(){
+    const W=800,H=260,L=40,R=40,T=14,B=34;
+    const planned = PLAN.map((_,i)=>plannedRunKm(i));
+    const actual = PLAN.map((_,i)=>weekActual(i));
+    const top = Math.ceil(Math.max(30, ...planned, ...actual)/10)*10;
+    const y = v => T + (H-T-B)*(1 - v/top);
+    const yk = v => T + (H-T-B)*(1 - v/10);
+    const bw = (W-L-R)/N;
+    const ci = currentWeekIndex();
+    let s = "";
+    for (let g=0; g<=top; g+=10){
+      s += `<line x1="${L}" x2="${W-R}" y1="${y(g)}" y2="${y(g)}" stroke="var(--line)" stroke-width="1"/>`;
+      s += `<text x="${L-6}" y="${y(g)+4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${g}</text>`;
+    }
+    [0,5,10].forEach(k=> s += `<text x="${W-R+6}" y="${yk(k)+4}" font-size="11" fill="var(--bad)" font-family="IBM Plex Mono,monospace">${k}</text>`);
+    const pts = [];
+    PLAN.forEach((w,i)=>{
+      const x = L + i*bw + bw*0.2, wd = bw*0.6;
+      s += `<rect x="${x}" y="${y(planned[i])}" width="${wd}" height="${H-B-y(planned[i])}" fill="none" stroke="var(--${w.p})" stroke-width="1.5" stroke-dasharray="3 2" rx="2"/>`;
+      if (actual[i]>0){ const a = Math.min(actual[i],top);
+        s += `<rect x="${x+3}" y="${y(a)}" width="${wd-6}" height="${H-B-y(a)}" fill="var(--${w.p})" rx="2"/>`;
+        s += `<text x="${x+wd/2}" y="${y(a)-4}" text-anchor="middle" font-size="10" fill="var(--fg)" font-family="IBM Plex Mono,monospace">${actual[i].toFixed(1)}</text>`; }
+      s += `<text x="${x+wd/2}" y="${H-B+16}" text-anchor="middle" font-size="11" fill="${i===ci?"var(--fg)":"var(--muted)"}" font-weight="${i===ci?700:400}" font-family="IBM Plex Mono,monospace">W${i+1}</text>`;
+      const k = weekKnee(i); if (k!==null) pts.push([x+wd/2, yk(k), k]);
+    });
+    if (pts.length>1) s += `<polyline points="${pts.map(p=>p[0]+","+p[1]).join(" ")}" fill="none" stroke="var(--bad)" stroke-width="1.5"/>`;
+    pts.forEach(p=> s += `<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="var(--bad)" stroke="var(--surface)" stroke-width="1.5"><title>ひざ ${p[2]}/10</title></circle>`);
+    s += `<text x="${L}" y="${H-4}" font-size="10" fill="var(--muted)">左軸 km（屋外・トレッドミル・レース）／右軸 ひざの痛み 0–10</text>`;
+    $("chart").innerHTML = s;
+
+    const runs = logs.filter(l=>RUN_TYPES.includes(l.type));
+    const total = runs.reduce((a,l)=>a+(Number(l.distance)||0),0);
+    const longest = logs.filter(l=>l.type==="屋外ラン").reduce((a,l)=>Math.max(a,Number(l.distance)||0),0);
+    const t = today(), from = ymd(addDays(t,-6));
+    const days7 = new Set(logs.filter(l=>l.date>=from && l.date<=ymd(t)).map(l=>l.date)).size;
+    const ciw = Math.max(0, Math.min(N-1, ci));
+    $("stats").innerHTML = [
+      [total.toFixed(1)+" km","これまでの距離（歩き含む）"],
+      [longest.toFixed(1)+" km","屋外ランの最長（目標 20km）"],
+      [days7+" / 7 日","直近7日の記録日数"],
+      [weekActual(ciw).toFixed(1)+" / "+plannedRunKm(ciw)+" km",`W${ciw+1} の実績／目安`],
+      (()=>{ const o = sortedLogs().find(l=>(l.type==="屋外ラン"||l.type==="屋外ウォーク") && paceOf(l));
+        return o ? [fmtPace(paceOf(o)).replace("/km",""), `直近の屋外ペース（${md(parse(o.date))}・1kmあたり）制限は8分32秒`] : ["—","屋外のペース（距離と時間を入れると自動で出ます）"]; })(),
+      (()=>{ const o = sortedLogs().find(l=>l.type==="屋外ラン" && Number(l.distance)>=10 && paceOf(l));
+        if (!o) return ["—","完走予想（水曜に10km以上走ると出ます）"];
+        const m = paceOf(o)*42.195*1.08, hh = Math.floor(m/60), mm = Math.round(m%60);
+        return [`${hh}時間${pad(mm)}分`, `完走予想（${md(parse(o.date))} の${Number(o.distance).toFixed(0)}kmのペース＋後半の落ち込み8%）制限6時間`]; })()
+    ].map(([v,k])=>`<div class="stat"><div class="v num">${v}</div><div class="k">${k}</div></div>`).join("");
+  }
+  function renderPlan(){
+    const ci = currentWeekIndex(), starts = weekStarts();
+    $("planBody").innerHTML = PLAN.map((w,i)=>{
+      const s = STR[w.p];
+      return `<tr class="${i===ci?"cur":""}"><td class="wk"><b>W${i+1}</b><br><span class="muted num">${md(starts[i])}〜</span></td>
+      <td><span class="pill" data-p="${w.p}">${PHASE_NAME[w.p]}</span></td>
+      <td><b class="num">${w.wed} km</b><br><span class="muted">${w.how}</span></td>
+      <td>${w.tue}</td><td>${w.fri}</td><td>月：${s.mon}<br>土：${i===N-1?"休養":s.sat}</td><td>${w.note}</td></tr>`;
+    }).join("");
+  }
+  function esc(s){ const d=document.createElement("div"); d.textContent = s==null?"":String(s); return d.innerHTML; }
+  function renderLogs(){
+    const box = $("logs");
+    if (!logs.length){ box.innerHTML = `<div class="empty">${dbRef ? "まだ記録はありません。上のフォームから、今日のトレーニングかひざの状態を1件目として保存してください。" : esc(dataMsg)}</div>`; return; }
+    box.innerHTML = sortedLogs().map(l=>{
+      const d = parse(l.date);
+      const exs = (l.exercises||[]).map(e=>`${e.name} ${e.kg?e.kg+"kg ":""}${e.reps}×${e.sets}`).join(" / ");
+      const bits = [l.menu?`メニュー${l.menu}`:"", l.distance?`${Number(l.distance).toFixed(1)}km`:"", l.minutes?`${l.minutes}分`:"", (RUN_TYPES.includes(l.type)&&paceOf(l))?fmtPace(paceOf(l)):"", l.rpe?`きつさ${l.rpe}`:"", l.weight?`体重${Number(l.weight).toFixed(1)}kg`:"", exs].filter(Boolean).join(" ・ ");
+      const kp = hasKnee(l) ? `<span class="kp" data-s="${kneeState(l.knee)}">ひざ${l.knee}</span> ` : "";
+      return `<div class="log ${editing===l.id?"editing":""}"><span class="num">${md(d)}（${DOW[d.getDay()]}）</span><b>${esc(l.type)}</b>
+        <span class="memo">${kp}<span class="num" style="color:var(--fg)">${esc(bits)}</span>${l.memo?" — "+esc(l.memo):""}</span>
+        <span class="acts"><button type="button" data-edit="${esc(l.id)}">修正</button><button type="button" data-del="${esc(l.id)}" class="${armed===l.id?"arm":""}">${armed===l.id?"本当に削除":"削除"}</button></span></div>`;
+    }).join("");
+  }
+  let weights = [], wArmed = null;
+  function renderWeights(){
+    const w = [...weights].sort((a,b)=>a.date<b.date?-1:1);
+    if (!w.length){
+      $("wStat").innerHTML = `<div class="v num">— kg</div><div class="k">${dbRef?"まだ記録がありません。朝に測ったら上に入力してください":esc(dataMsg)}</div>`;
+      $("wChart").innerHTML = `<text x="300" y="64" text-anchor="middle" font-size="12" fill="var(--muted)">記録が2件以上になると、ここに推移が出ます</text>`;
+      $("wList").innerHTML = ""; return;
+    }
+    const last = w[w.length-1], d = last.kg - w[0].kg;
+    const wf = w.filter(x=>x.fat), lf = wf[wf.length-1];
+    const fatTxt = lf ? ` ・ 体脂肪率 ${lf.fat.toFixed(1)}%${wf.length>1?`（最初から ${(lf.fat-wf[0].fat)>0?"+":""}${(lf.fat-wf[0].fat).toFixed(1)}）`:""}` : "";
+    $("wStat").innerHTML = `<div class="v num">${last.kg.toFixed(1)} kg</div><div class="k">${md(parse(last.date))} 時点${w.length>1?` ・ 最初の記録から ${d>0?"+":""}${d.toFixed(1)}kg`:""}${fatTxt}</div>`;
+    if (w.length < 2){ $("wChart").innerHTML = `<text x="300" y="64" text-anchor="middle" font-size="12" fill="var(--muted)">記録が2件以上になると、ここに推移が出ます</text>`; }
+    else {
+      const W=600,H=120,L=44,R=14,T=14,B=24;
+      const ks = w.map(x=>x.kg), lo = Math.floor(Math.min(...ks)-0.5), hi = Math.ceil(Math.max(...ks)+0.5);
+      const t0 = parse(w[0].date).getTime(), t1 = parse(last.date).getTime();
+      const x = v => L + (W-L-R)*((parse(v).getTime()-t0)/Math.max(1,t1-t0));
+      const y = v => T + (H-T-B)*(1-(v-lo)/(hi-lo));
+      let g = "";
+      [lo,(lo+hi)/2,hi].forEach(v=>{ g += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${v.toFixed(1)}</text>`; });
+      g += `<polyline points="${w.map(p=>x(p.date)+","+y(p.kg)).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2"/>`;
+      w.forEach((p,i)=> g += `<circle cx="${x(p.date)}" cy="${y(p.kg)}" r="${i===w.length-1?4:2.5}" fill="var(--accent)"><title>${md(parse(p.date))} ${p.kg.toFixed(1)}kg</title></circle>`);
+      g += `<text x="${L}" y="${H-6}" font-size="10" fill="var(--muted)">${md(parse(w[0].date))}</text><text x="${W-R}" y="${H-6}" text-anchor="end" font-size="10" fill="var(--muted)">${md(parse(last.date))}</text>`;
+      $("wChart").innerHTML = g;
+    }
+    $("wList").innerHTML = w.slice(-12).reverse().map(p=>`<span class="wchip"><span class="num">${md(parse(p.date))} ${p.kg.toFixed(1)}kg${p.fat?` ・ ${p.fat.toFixed(1)}%`:""}</span><button type="button" data-wdel="${esc(p.date)}" class="${wArmed===p.date?"arm":""}">${wArmed===p.date?"削除する":"削除"}</button></span>`).join("");
+  }
+  const paceOf = l => (Number(l.distance)>0 && Number(l.minutes)>0) ? l.minutes/l.distance : 0;
+  const fmtPace = p => { const sec = Math.round(p*60); return Math.floor(sec/60)+"分"+pad(sec%60)+"秒/km"; };
+  function renderStrip(){
+    const t = today(); let h = "";
+    for (let k=13;k>=0;k--){
+      const d = addDays(t,-k), ds = ymd(d), v = logs.filter(l=>l.date===ds && hasKnee(l)).map(l=>l.knee);
+      const m = v.length ? Math.max(...v) : null;
+      h += `<div class="kc ${k===0?"t":""}" data-s="${m===null?"none":kneeState(m)}" title="${md(d)} ${m===null?"記録なし":"ひざ "+m+"/10"}">${d.getDate()}日<b>${m===null?"–":m}</b></div>`;
+    }
+    $("kstrip").innerHTML = h;
+  }
+  function renderNudge(){
+    const box = $("nudge");
+    if (!dbRef){ box.hidden = true; return; }
+    const t = today(), ts = ymd(t), ys = ymd(addDays(t,-1)), items = [];
+    if (!logs.some(l=>l.date===ts && hasKnee(l))){
+      const trained = logs.some(l=>l.date===ys && l.type!=="翌朝チェック" && l.type!=="ストレッチ・休養");
+      items.push(trained ? "昨日トレーニングをしています。上の「今朝のひざの痛みは？」で数字を押して記録してください。" : "今日のひざの痛みがまだ記録されていません。上の「今朝のひざの痛みは？」で数字を押してください（痛みがなければ 0）。");
+    }
+    const lw = [...weights].sort((a,b)=>a.date<b.date?1:-1)[0];
+    if (!lw) items.push("体重の記録がまだありません。朝に測ったら「体重」の欄に入れてください。");
+    else if (lw.date < ymd(addDays(t,-4))) items.push(`体重を最後に記録したのは ${md(parse(lw.date))} です。朝に測ってみてください。`);
+    const noKg = sortedLogs().find(l=>l.type==="筋トレ");
+    if (noKg && (noKg.exercises||[]).some(e=>!e.kg && ["アブダクター","レッグエクステンション","カーフプレス","シーテッドレッグプレス","レッグカール","片脚レッグプレス"].includes(e.name)))
+      items.push("前回の筋トレで、重さが空欄のマシン種目があります。次回マシンの数字を確認して、履歴の「修正」から入れてください。");
+    box.hidden = !items.length;
+    box.innerHTML = items.length ? `<b>記録もれ</b><ul>${items.map(x=>`<li>${x}</li>`).join("")}</ul>` : "";
+  }
+  function renderStrength(){
+    const byName = {};
+    [...logs].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(a.createdAt||0)-(b.createdAt||0)).forEach(l=>(l.exercises||[]).forEach(e=>{ (byName[e.name] = byName[e.name]||[]).push({...e, date:l.date}); }));
+    const names = Object.keys(byName);
+    if (!names.length){ $("strTbl").innerHTML = `<div style="padding:16px;color:var(--muted);font-size:.9rem">筋トレを記録すると、種目ごとの重さ・回数の推移がここに出ます。</div>`; return; }
+    $("strTbl").innerHTML = `<table><thead><tr><th>種目</th><th>最新</th><th>最初の記録から</th><th>回数</th></tr></thead><tbody>` + names.map(n=>{
+      const a = byName[n], last = a[a.length-1], withKg = a.filter(x=>x.kg), f = withKg[0];
+      const vol = x => x.reps*x.sets;
+      let diff = "—";
+      if (last.kg && f && withKg.length>1){ const d = last.kg - f.kg; diff = d>0 ? `<span class="up">+${d}kg</span>` : d<0 ? `${d}kg` : "変化なし"; }
+      else if (!last.kg && a.length>1){ const d = vol(last)-vol(a[0]); diff = d>0 ? `<span class="up">+${d}回</span>` : d<0 ? `${d}回` : "変化なし"; }
+      return `<tr><td><b>${esc(n)}</b></td><td class="num">${last.kg?last.kg+"kg ・ ":""}${last.reps}×${last.sets}<br><span class="muted">${md(parse(last.date))}</span></td><td>${diff}</td><td class="num">${a.length}回</td></tr>`;
+    }).join("") + `</tbody></table>`;
+  }
+  $("kqBtns").innerHTML = Array.from({length:11},(_,i)=>`<button type="button" data-k="${i}" aria-label="ひざの痛み ${i}">${i}</button>`).join("");
+  const todayCheck = () => logs.find(l=>l.date===ymd(today()) && l.type==="翌朝チェック");
+  function renderKq(){
+    const c = todayCheck(), v = c && hasKnee(c) ? c.knee : null;
+    document.querySelectorAll("#kqBtns button").forEach(b=>b.classList.toggle("sel", Number(b.dataset.k)===v));
+    if (v!==null && !$("kqStatus").dataset.busy) $("kqStatus").textContent = `今朝は ${v} で記録済みです。別の数字を押すと変更できます`;
+  }
+  $("kqBtns").addEventListener("click", async ev=>{
+    const b = ev.target.closest("button[data-k]"); if (!b) return;
+    const st = $("kqStatus"), k = Number(b.dataset.k);
+    if (!dbRef){ st.textContent = "この表示では保存できません。claude.ai にサインインして開いてください。"; return; }
+    st.dataset.busy = "1"; st.textContent = "保存中…";
+    try {
+      const c = todayCheck();
+      if (c){ const {id, ...rest} = c; await dbRef.collection("logs").doc(id).set({...rest, knee:k}); }
+      else await dbRef.collection("logs").add({date:ymd(today()), type:"翌朝チェック", distance:0, minutes:0, rpe:0, knee:k, memo:"", createdAt:Date.now()});
+      delete st.dataset.busy; st.textContent = `今朝は ${k} で記録しました。別の数字を押すと変更できます`;
+    } catch(e){ delete st.dataset.busy; st.textContent = "保存できませんでした："+(e&&e.message||"もう一度お試しください"); }
+  });
+  function renderAll(){ renderKq(); renderStrip(); renderNudge(); renderStrength(); renderWeights(); renderHeader(); renderKnee(); renderLanes(); renderWeek(); renderChart(); renderPlan(); renderLogs(); }
+
+  $("editRace").addEventListener("click", ()=>{ $("settings").hidden = !$("settings").hidden; });
+  $("saveRace").addEventListener("click", async ()=>{
+    const date = $("raceDate").value; if (!date){ $("raceStatus").textContent="開催日を入れてください"; return; }
+    race = {name:$("raceName").value.trim(), date};
+    renderAll();
+    if (!dbRef){ $("raceStatus").textContent="この表示では保存できません（サインインが必要です）"; return; }
+    try { await dbRef.doc("settings/race").set(race); $("raceStatus").textContent="保存しました"; }
+    catch(e){ $("raceStatus").textContent="保存できませんでした："+(e&&e.message||"権限を確認してください"); }
+  });
+  $("fDate").value = ymd(today());
+  // 筋トレの種目: [名前, 回数(秒), セット, 重さ欄あり, 初期チェック]
+  const EX = {
+    A:[["アブダクター",15,3,1,1],["レッグエクステンション",15,2,1,1],["カーフプレス",20,2,1,1],["ヒップリフト",15,3,0,0],["クラムシェル",15,2,0,0],["プランク（秒）",30,2,0,0],["サイドプランク（秒）",20,2,0,0]],
+    B:[["アブダクター",15,3,1,1],["シーテッドレッグプレス",15,3,1,1],["バックエクステンション",12,2,0,0],["デッドバグ",10,2,0,0],["サイドプランク（秒）",20,2,0,0]],
+    X:[["ステップダウン",10,2,0,0],["レッグカール",12,2,1,0],["片脚レッグプレス",10,2,1,0]]
+  };
+  function lastKg(name){
+    for (const l of sortedLogs()){ const e = (l.exercises||[]).find(x=>x.name===name && x.kg); if (e) return e.kg; }
+    return "";
+  }
+  function exRows(){
+    const m = $("fMenu").value, main = EX[m], names = new Set(main.map(e=>e[0]));
+    const other = EX[m==="A"?"B":"A"].filter(e=>!names.has(e[0])).map(e=>[e[0],e[1],e[2],e[3],0]);
+    return main.concat(other, EX.X);
+  }
+  let editing = null;
+  const FIELDS = ["fDist","fMin","fRpe","fKnee","fMemo"];
+  function endEdit(){
+    editing = null; FIELDS.forEach(id=>$(id).value="");
+    $("submitBtn").textContent = "記録を保存"; $("cancelEdit").hidden = true; syncFields(); renderLogs();
+  }
+  function startEdit(id){
+    const l = logs.find(x=>x.id===id); if (!l) return;
+    editing = id;
+    $("fDate").value = l.date; $("fType").value = l.type; $("fMenu").value = l.menu || "A";
+    syncFields();
+    if (l.type==="筋トレ") renderEx(l.exercises||[]);
+    $("fDist").value = l.distance||""; $("fMin").value = l.minutes||""; $("fRpe").value = l.rpe||"";
+    $("fKnee").value = hasKnee(l) ? l.knee : ""; $("fMemo").value = l.memo||"";
+    $("submitBtn").textContent = "修正を保存"; $("cancelEdit").hidden = false;
+    $("formStatus").textContent = `${md(parse(l.date))} ${l.type} の記録を修正中です`;
+    renderLogs();
+    $("logForm").scrollIntoView({behavior:"smooth", block:"start"});
+  }
+  function renderEx(pre){
+    const rows = exRows(), P = Array.isArray(pre) ? Object.fromEntries(pre.map(e=>[e.name,e])) : null;
+    $("exs").innerHTML = `<div class="ex head"><span></span><span>種目</span><span>重さ kg</span><span>回数</span><span>セット</span></div>` +
+      rows.map((e,i)=>{
+        const p = P && P[e[0]], on = P ? !!p : !!e[4];
+        const kg = p ? (p.kg||"") : (e[3] ? lastKg(e[0]) : "");
+        return `<div class="ex ${on?"":"off"}"><input type="checkbox" id="exc${i}" aria-label="${e[0]}をやった" ${on?"checked":""}>
+        <span class="nm">${e[0]}${i>=rows.length-3?"（W4〜）":""}</span>
+        <input type="number" id="exk${i}" step="0.5" min="0" inputmode="decimal" aria-label="重さ" value="${kg}" placeholder="${e[3]?"kg":"—"}">
+        <input type="number" id="exr${i}" min="0" inputmode="numeric" aria-label="回数" value="${p?p.reps:e[1]}">
+        <input type="number" id="exs${i}" min="0" inputmode="numeric" aria-label="セット数" value="${p?p.sets:e[2]}"></div>`;
+      }).join("");
+  }
+  function syncFields(){
+    const t = $("fType").value, str = t==="筋トレ", light = t==="ストレッチ・休養" || t==="翌朝チェック";
+    $("lDist").hidden = !RUN_TYPES.includes(t);
+    $("lMin").hidden = t==="翌朝チェック";
+    $("lRpe").hidden = light;
+    $("strBox").hidden = !str;
+    if (str) renderEx();
+  }
+  (function initType(){
+    const dow = today().getDay();
+    $("fType").value = ["ストレッチ・休養","筋トレ","トレッドミル","屋外ラン","翌朝チェック","トレッドミル","筋トレ"][dow];
+    $("fMenu").value = dow===6 && currentWeekIndex()>=0 ? "B" : "A";
+  })();
+  $("fType").addEventListener("change", ()=>{ syncFields(); if ($("fType").value==="翌朝チェック") $("fKnee").focus(); });
+  $("fMenu").addEventListener("change", ()=>renderEx());
+  $("cancelEdit").addEventListener("click", ()=>{ endEdit(); $("formStatus").textContent="修正をやめました"; });
+  $("exs").addEventListener("change", ev=>{ if (ev.target.type==="checkbox") ev.target.closest(".ex").classList.toggle("off", !ev.target.checked); });
+  syncFields();
+  $("logForm").addEventListener("submit", async ev=>{
+    ev.preventDefault();
+    const st = $("formStatus");
+    if (!dbRef){ st.textContent="この表示では保存できません。claude.ai にサインインして開いてください。"; return; }
+    const num = id => ($(id).value==="" || $(id).closest("label").hidden) ? 0 : Number($(id).value);
+    const isStr = $("fType").value==="筋トレ";
+    const exercises = !isStr ? [] : exRows().map((e,i)=>({on:$("exc"+i).checked, name:e[0], kg:Number($("exk"+i).value)||0, reps:Number($("exr"+i).value)||0, sets:Number($("exs"+i).value)||0}))
+      .filter(x=>x.on).map(({on,...x})=>x);
+    const rec = {
+      date:$("fDate").value, type:$("fType").value,
+      distance:num("fDist"), minutes:num("fMin"), rpe:num("fRpe"),
+      knee: $("fKnee").value==="" ? null : Math.max(0, Math.min(10, Number($("fKnee").value))),
+      memo:$("fMemo").value.trim(), createdAt:Date.now()
+    };
+    if (isStr){ rec.menu = $("fMenu").value; rec.exercises = exercises; }
+    if (!rec.date){ st.textContent="日付を入れてください"; return; }
+    if (isStr && !exercises.length){ st.textContent="やった種目に1つ以上チェックを入れてください"; return; }
+    st.textContent="保存中…";
+    try {
+      if (editing){ const o = logs.find(x=>x.id===editing); if (o && o.createdAt) rec.createdAt = o.createdAt;
+        await dbRef.collection("logs").doc(editing).set(rec); endEdit();
+        st.textContent=`修正しました（${md(parse(rec.date))} ${rec.type}）`; return; }
+      await dbRef.collection("logs").add(rec);
+      st.textContent=`保存しました（${md(parse(rec.date))} ${rec.type}${rec.knee!==null?` ひざ${rec.knee}`:""}）`;
+      FIELDS.forEach(id=>$(id).value=""); }
+    catch(e){ st.textContent="保存できませんでした："+(e&&e.message||"もう一度お試しください"); }
+  });
+  $("logs").addEventListener("click", async ev=>{
+    const eb = ev.target.closest("button[data-edit]"); if (eb){ armed = null; startEdit(eb.dataset.edit); return; }
+    const b = ev.target.closest("button[data-del]"); if (!b) return;
+    const id = b.dataset.del;
+    if (armed !== id){ armed = id; renderLogs(); return; }
+    armed = null; if (editing===id) endEdit();
+    try { await dbRef.collection("logs").doc(id).delete(); } catch(e){ renderLogs(); }
+  });
+
+  $("wDate").value = ymd(today());
+  $("wForm").addEventListener("submit", async ev=>{
+    ev.preventDefault();
+    const st = $("wStatus"), date = $("wDate").value, kg = Number($("wKg").value);
+    if (!dbRef){ st.textContent="この表示では保存できません。claude.ai にサインインして開いてください。"; return; }
+    if (!date || !(kg>0)){ st.textContent="日付と体重を入れてください"; return; }
+    const had = weights.some(w=>w.date===date);
+    st.textContent="保存中…";
+    try { const fat = Number($("wFat").value)||0;
+      await dbRef.collection("weights").doc(date).set({date, kg, fat, createdAt:Date.now()});
+      st.textContent = `${had?"上書きしました":"保存しました"}（${md(parse(date))} ${kg.toFixed(1)}kg）`; $("wKg").value=""; $("wFat").value=""; }
+    catch(e){ st.textContent="保存できませんでした："+(e&&e.message||"もう一度お試しください"); }
+  });
+  $("wList").addEventListener("click", async ev=>{
+    const b = ev.target.closest("button[data-wdel]"); if (!b) return;
+    const id = b.dataset.wdel;
+    if (wArmed !== id){ wArmed = id; renderWeights(); return; }
+    wArmed = null;
+    try { await dbRef.collection("weights").doc(id).delete(); } catch(e){ renderWeights(); }
+  });
+
+  renderAll();
+
+  const timer = setTimeout(()=>{ if(!dbRef){ dataMsg="記録を読み込めませんでした。claude.ai にサインインした状態で開くと、記録の保存と表示ができます。"; renderLogs(); } }, 10000);
+  (async ()=>{
+    const db = window.claude && await window.claude.use("db");
+    if (!db){ clearTimeout(timer); dataMsg="この表示では記録を使えません。claude.ai にサインインした状態で開いてください。"; renderLogs(); return; }
+    dbRef = db;
+    db.doc("settings/race").onSnapshot(snap=>{
+      clearTimeout(timer);
+      const d = snap.exists ? snap.data() : null;
+      if (d && d.date) race = {name:d.name||"", date:d.date};
+      renderAll();
+    }, ()=>{});
+    db.collection("weights").onSnapshot(snap=>{
+      weights = snap.docs.map(d=>d.data()).filter(w=>w && w.date && Number(w.kg)>0).map(w=>({date:w.date, kg:Number(w.kg), fat:Number(w.fat)||0}));
+      renderWeights(); renderNudge();
+    }, ()=>{});
+    db.collection("logs").onSnapshot(snap=>{
+      clearTimeout(timer);
+      logs = snap.docs.map(d=>({id:d.id, ...d.data()}));
+      renderAll();
+    }, e=>{ clearTimeout(timer); dataMsg="記録を読み込めませんでした（"+(e&&e.code||"error")+"）。ページを開き直してください。"; renderLogs(); });
+  })();
+})();
+</script>
