@@ -11,8 +11,7 @@
 
 ## recipes/
 
-チャットで提案・調節したレシピを登録して見られる「うちのレシピ帳」。
+チャットで提案・調節したレシピを登録して見られる「うちのレシピ帳」（https://claude.ai/artifact/VSxMtTUpvH9bWUh6XBfJa6）。
 
-- `recipe-book.html` … 公開ページのソース（https://claude.ai/artifact/RR3T5WMfiRFcHSkBTyGfYN）
 - `README.md` … チャットからの登録方法とデータ形式
 - レシピ本体はページ側のデータベースに保存され、このリポジトリには含まれない
