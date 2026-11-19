@@ -1,17 +1,18 @@
 # うちのレシピ帳
 
 - ページ: https://claude.ai/artifact/VSxMtTUpvH9bWUh6XBfJa6
-- レシピはページ側のデータベース（コレクション `recipes`）に保存され、このリポジトリには含まれない
+- レシピはページ側のデータベースに、人ごとに分けて保存され、このリポジトリには含まれない
+- 1人ずつ自分専用のレシピ帳。ほかの人のレシピは「みんなのレシピ」に公開されたものだけ見える
 - ページの機能: 検索・カテゴリ/お気に入りの絞り込み、詳細表示、手入力での追加・編集・削除、ページ内の「提案してもらう」、レシピごとの「AIに相談」（相談の記録・メモに追加・レシピに反映）、「うちの調理環境」の保存
 
 ## チャットでの使い方
 
 - 「◯◯で作れる夕飯を提案して」→ Claude がレシピを提案
 - 「3人分にして」「減塩にして」「豚肉に変えて」→ 調節
-- 「レシピ帳に登録して」→ 内容を確認してもらってから `ArtifactData` で `recipes` に書き込む
+- 「レシピ帳に登録して」→ 内容を確認してもらってから `ArtifactData` で `data/users/me/book/recipes` に書き込む（`me` は頼んだ本人）
 - 「レシピ帳の◯◯を見せて／直して」→ 読み出して表示・更新（更新は読んだ version を `if_version` に指定）
 
-## `recipes/<doc_id>` のデータ形式（ページのコードに合わせること）
+## `data/users/me/book/recipes/<doc_id>` のデータ形式（ページのコードに合わせること）
 
 doc_id は英数字とハイフン（例 `torimune-shoga-itame`）。
 
@@ -27,7 +28,8 @@ doc_id は英数字とハイフン（例 `torimune-shoga-itame`）。
 | tags | string[] | 例: 時短, ヘルシー, 高たんぱく, 作り置き向き, 走る前の補給, 走った後の回復, 子どもも喜ぶ |
 | note | string | コツ・保存方法など |
 | favorite | boolean | お気に入り（新規は false） |
-| source | string | `claude`（チャットで登録）/ `ai`（ページ内の提案）/ `manual`（手入力） |
+| source | string | `claude`（チャットで登録）/ `ai`（ページ内の提案）/ `manual`（手入力）/ `shared`（みんなのレシピから保存） |
+| sharedFrom | string | `shared` のとき、公開した人のユーザーID |
 | shopping | {item, amount, price, why, without, store, storeDays}[] | 買い足すもの（任意）。price はおおよその円、why は買う理由、without は買わずに作る方法、store は残った分の保存方法、storeDays は保存期間の目安（例「冷蔵2〜3日・冷凍1か月」） |
 | budget | number \| "free" | 提案時の買い足し予算（円）。0 は買い足さない、"free" は気にしない（任意） |
 | createdAt | number | ミリ秒の Unix 時刻。一覧はこの新しい順なので必須 |
@@ -46,15 +48,22 @@ doc_id は英数字とハイフン（例 `torimune-shoga-itame`）。
 
 ## そのほかのデータ
 
-- `recipes/<doc_id>/advice/<id>` … レシピごとの「AIに相談」の記録 `{q, a, createdAt(ミリ秒)}`。古い順に表示
-- `settings/kitchen` … うちの調理環境 `{equipment, pantry, updatedAt}`。equipment は調理器具・設備、pantry はいつも家にある食材・調味料（どちらも自由記述）
+- `data/users/me/book/recipes/<doc_id>/advice/<id>` … レシピごとの「AIに相談」の記録 `{q, a, createdAt(ミリ秒)}`。古い順に表示
+- `data/users/me/kitchen` … うちの調理環境 `{equipment, pantry, updatedAt}`。equipment は調理器具・設備、pantry はいつも家にある食材・調味料（どちらも自由記述）
 
-チャットで提案・相談するときも、まず `settings/kitchen` を読んで、その器具で作れるレシピにし、家にある食材・調味料を活かす。
-「グリルを買った」「圧力鍋はない」など環境の話が出たら、確認してから `settings/kitchen` を更新する。
+チャットで提案・相談するときも、まず `data/users/me/kitchen` を読んで、その器具で作れるレシピにし、家にある食材・調味料を活かす。
+「グリルを買った」「圧力鍋はない」など環境の話が出たら、確認してから `data/users/me/kitchen` を更新する。
 
 ## 買い足しの判断
 
-提案のときは、家にある食材と `settings/kitchen` の常備品にないものを、買い足し予算の範囲で買うか考える。
+提案のときは、家にある食材と `data/users/me/kitchen` の常備品にないものを、買い足し予算の範囲で買うか考える。
 買わなくてもおいしく作れるならそちらを優先し、買う場合は `shopping` におおよその値段・買う理由・買わずに作る方法を入れる。合計が予算をこえないようにする。
 買い足すものには、残った分の保存方法（store）と保存期間の目安（storeDays）も必ず入れる。
 チャットで予算が分からないときは聞く。
+
+## みんなのレシピ（公開）
+
+- `shared/<ユーザーID>` に、その人が公開したレシピを `{recipes: {<自分のレシピの doc_id>: {name, category, ..., publishedAt, updatedAt}}, updatedAt}` の形でまとめて持つ
+- 公開されるのは name, category, minutes, servings, kcal, ingredients, steps, tags, note, shopping, budget。相談の記録・お気に入り・調理環境は公開しない
+- 書き込めるのは本人の `shared/<自分のID>` だけ。ページの持ち主は全員分を削除できる（不適切な投稿の取り下げ用）
+- 公開は本人がページのボタンで行う。チャットから公開・取り下げをするのは、本人にはっきり頼まれたときだけ
