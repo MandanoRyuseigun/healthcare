@@ -28,6 +28,10 @@ fi
 # ベータ版：コミット済みの版と比べて APP_VERSION が上がっているか
 ver() { grep -o 'APP_VERSION = "[^"]*"' | head -n 1 | cut -d'"' -f2; }
 now=$(ver < "$f")
+if [ -z "$now" ]; then
+  jq -n '{hookSpecificOutput:{hookEventName:"PostToolUse",additionalContext:"ベータ版のページ（バージョン番号なし）のスクリプトは構文OK。"}}'
+  exit 0
+fi
 dir=$(cd "$(dirname "$f")" && pwd)
 rel=$(cd "$dir" && git ls-files --full-name -- "$(basename "$f")" 2>/dev/null)
 old=""

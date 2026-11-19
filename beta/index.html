@@ -113,6 +113,16 @@ table.log th:first-child, table.log td:first-child { text-align: left; }
 dialog { border: 0; border-radius: 14px; padding: 0; width: min(640px, calc(100% - 24px)); max-height: calc(100% - 48px); background: var(--surface); color: var(--ink); }
 dialog::backdrop { background: rgba(10, 16, 12, .45); }
 .dlg { display: grid; gap: 14px; padding: 18px; }
+.hist { display: grid; gap: 6px; }
+.hist h4 { font-family: var(--display); font-size: .95rem; margin: 0; }
+.hist-list { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.hist-item { flex: none; max-width: 220px; text-align: left; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 6px 10px; font-size: .82rem; line-height: 1.4; }
+.hist-item[aria-current="true"] { border-color: var(--herb); background: var(--herb-soft); }
+.hist-item b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hist-item span { color: var(--muted); font-size: .75rem; }
+.fb-row { display: flex; justify-content: center; padding-top: 8px; }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: .9rem; }
+.check input { margin-top: 5px; }
 footer.ver { text-align: center; font-size: .75rem; color: var(--muted); padding: 8px 16px 24px; }
 footer.ver b { font-variant-numeric: tabular-nums; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 8px 18px; border-radius: 999px; font-size: .88rem; z-index: 30; }
@@ -140,7 +150,8 @@ footer.ver b { font-variant-numeric: tabular-nums; }
     <div class="box">
       <b>お金と記録について</b><br>
       AIの利用料は、あなたの Puter アカウントの毎月の無料枠から使われます。このアプリは試験中のため、AIは「節約モード」に固定しています。<br>
-      レシピと調理環境は、あなたの Puter アカウントの中に保存され、運営者には見えません。
+      レシピと調理環境は、あなたの Puter アカウントの中に保存され、運営者には見えません。<br>
+      改善のため、使った回数（提案・献立・保存など）とバージョンだけを、名前の代わりの番号で運営に送ります。料理の中身は送りません。「使用量」の画面でいつでも止められます。
     </div>
     <div class="actions"><button class="btn primary" id="btn-in" type="button">Puter でログイン</button></div>
     <p class="status" id="welcome-status"></p>
@@ -167,6 +178,7 @@ footer.ver b { font-variant-numeric: tabular-nums; }
         <div class="actions"><button class="btn primary" id="s-go" type="button">提案してもらう</button></div>
         <p class="status" id="s-status" role="status"></p>
         <div id="s-out"></div>
+        <div class="hist" id="s-hist" hidden></div>
       </section>
 
       <section data-view="book" hidden>
@@ -194,13 +206,23 @@ footer.ver b { font-variant-numeric: tabular-nums; }
         </div>
         <div id="u-puter"></div>
         <div class="scroll"><table class="log"><thead><tr><th>日時</th><th>種類</th><th>送った字数</th><th>受け取った字数</th><th>秒</th></tr></thead><tbody id="u-log"></tbody></table></div>
+        <label class="check"><input type="checkbox" id="u-share" checked><span>利用状況を運営に送る（ベータの改善に使います）。送るのは、名前の代わりの番号、使った日、提案・献立・保存などの回数とアプリのバージョンだけです。料理の中身・写真・調理環境は送りません。外すと送りません。</span></label>
         <p class="hint">Puter の画面（puter.com の設定 › 使用量）でも、無料枠の残りを確かめられます。回数と見比べると、1回あたりの消費が分かります。</p>
       </section>
     </main>
   </div>
 </div>
 
+<div class="wrap fb-row"><button class="btn" id="fb-open" type="button">ご意見・不具合を送る</button></div>
 <footer class="ver" id="ver-foot"></footer>
+
+<!-- Netlify Forms: 公開時に Netlify がこの2つのフォームを見つけて受け付ける。画面には出さない -->
+<form name="usage" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <input name="bot-field"><input name="uid"><input name="event"><input name="version"><input name="detail">
+</form>
+<form name="feedback" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <input name="bot-field"><input name="uid"><input name="version"><input name="kind"><textarea name="message"></textarea><input name="screen">
+</form>
 
 <dialog id="dlg"><div class="dlg" id="dlg-body"></div></dialog>
 <div class="toast" id="toast" hidden></div>
@@ -210,7 +232,7 @@ footer.ver b { font-variant-numeric: tabular-nums; }
 "use strict";
 /* ===== settings ===== */
 // バージョン：更新するたびに上げる（公開した版が最新かを画面で確かめるため）
-const APP_VERSION = "0.4.0";
+const APP_VERSION = "0.5.0";
 const APP_DATE = "2026-11-20";
 const AI_MODEL = "claude-haiku-5-5";   // 節約モード固定（試験版）。Puter が受け付けないときは Puter の標準モデルで再試行する
 const CATS = ["主菜", "副菜", "汁物", "ご飯・麺", "作り置き", "おやつ"];
@@ -342,6 +364,80 @@ function renderKitchenHint() {
   $("s-kit").textContent = kitchenText() ? "登録した調理環境と常備品をふまえて考えます。" : "「調理環境」に器具と常備品を登録すると、それに合わせて考えます。";
 }
 
+/* ===== beta telemetry (counts only) and feedback, via Netlify Forms ===== */
+let anonId = "", shareUsage = true;
+async function loadPrefs() {
+  try { anonId = (await store.get("anon")) || ""; } catch {}
+  if (!anonId) { anonId = "u" + Math.random().toString(36).slice(2, 10); try { await store.set("anon", anonId); } catch {} }
+  try { const v = await store.get("shareUsage"); shareUsage = v !== false; } catch {}
+  $("u-share").checked = shareUsage;
+}
+async function sendForm(name, fields) {
+  const body = new URLSearchParams({ "form-name": name, ...fields }).toString();
+  const res = await fetch("/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
+  if (!res.ok) throw new Error("form " + res.status);
+}
+function track(event, detail) {
+  if (!shareUsage || !anonId) return;
+  sendForm("usage", { uid: anonId, event, version: APP_VERSION, detail: detail == null ? "" : String(detail) }).catch(() => {});
+}
+async function trackOpenOncePerDay() {
+  const today = new Date().toISOString().slice(0, 10);
+  try { if ((await store.get("lastOpen")) === today) return; await store.set("lastOpen", today); } catch {}
+  track("open", today);
+}
+let currentTab = "suggest";
+function openFeedback() {
+  const body = $("dlg-body"); body.textContent = "";
+  const kind = h("select", { id: "fb-kind" }, ...["使いにくい", "不具合・エラー", "ほしい機能", "よかった点", "その他"].map(k => h("option", { value: k }, k)));
+  const msg = h("textarea", { id: "fb-msg", rows: "5", placeholder: "例：献立の待ち時間が長い／〇〇の材料が手に入りにくい" });
+  const st = h("p", { class: "status", role: "status" });
+  const send = h("button", { class: "btn primary", type: "button", onclick: async () => {
+    if (!msg.value.trim()) { st.className = "status err"; st.textContent = "内容を書いてください。"; msg.focus(); return; }
+    send.disabled = true; st.className = "status"; st.textContent = "送っています…";
+    try {
+      await sendForm("feedback", { uid: anonId || "", version: APP_VERSION, kind: kind.value, message: msg.value.trim().slice(0, 2000), screen: currentTab });
+      body.textContent = ""; body.append(h("h3", { style: "font-family:var(--display);margin:0" }, "送りました"), h("p", { style: "margin:0" }, "ありがとうございます。今後の改善に使います。"),
+        h("div", { class: "actions" }, h("button", { class: "btn primary", type: "button", onclick: () => $("dlg").close() }, "閉じる")));
+    } catch { st.className = "status err"; st.textContent = "送れませんでした。通信状況を確かめて、もう一度試してください。"; send.disabled = false; }
+  } }, "送る");
+  body.append(h("h3", { style: "font-family:var(--display);margin:0" }, "ご意見・不具合を送る"),
+    h("p", { class: "hint" }, "運営者だけが読みます。料理の写真やレシピの中身は送られません。"),
+    h("div", { class: "field" }, h("label", { for: "fb-kind" }, "種類"), kind),
+    h("div", { class: "field" }, h("label", { for: "fb-msg" }, "内容"), msg), st,
+    h("div", { class: "actions" }, h("button", { class: "btn", type: "button", onclick: () => $("dlg").close() }, "やめる"), send));
+  if (!$("dlg").open) $("dlg").showModal();
+}
+
+/* ===== suggestion history (recent drafts, kept in the user's Puter) ===== */
+let histList = [], viewing = -1;
+async function loadHistory() { try { histList = arr(await store.get("history")); } catch { histList = []; } renderHistory(); }
+async function pushHistory(d) {
+  histList = [{ at: Date.now(), d }, ...histList].slice(0, 10); viewing = 0;
+  try { await store.set("history", histList); } catch {}
+  renderHistory();
+}
+function renderHistory() {
+  const box = $("s-hist"); box.textContent = "";
+  if (!histList.length) { box.hidden = true; return; }
+  box.hidden = false;
+  const list = h("div", { class: "hist-list" });
+  histList.forEach((x, i) => {
+    const t = new Date(x.at), label = x.d.kind === "menu" ? `献立：${x.d.title}` : x.d.name;
+    list.append(h("button", { class: "hist-item", type: "button", "aria-current": String(i === viewing), onclick: () => { viewing = i; showDraft(x.d); renderHistory(); } },
+      h("b", {}, label), h("span", {}, `${t.getMonth() + 1}/${t.getDate()} ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}${x.saved ? "・保存済み" : ""}`)));
+  });
+  box.append(h("h4", {}, "これまでの提案（最新10件）"), list, h("p", { class: "hint" }, "押すと、その提案をもう一度表示して保存できます。"));
+}
+function showDraft(d) {
+  draft = d;
+  const out = $("s-out"); out.textContent = ""; $("s-status").textContent = "";
+  const isMenu = d.kind === "menu";
+  out.append(isMenu ? menuView(d) : recipeView(d), h("div", { class: "actions" },
+    h("button", { class: "btn", type: "button", onclick: suggest }, isMenu ? "別の献立" : "別の案"),
+    h("button", { class: "btn primary", type: "button", onclick: saveDraft }, isMenu ? "献立をレシピ帳に保存" : "レシピ帳に保存")));
+}
+
 /* ===== suggestion ===== */
 function budgetLine(b) {
   if (b === "0") return "買い足しはしません。使いたい食材と家にある食材・調味料だけで作れる料理にし、shopping は空の配列にしてください。";
@@ -464,10 +560,7 @@ async function suggest() {
         m = parseJSON(await askAI(buildMenuPrompt(req) + `\n前回は料理の数か種類が合っていませんでした。必ず ${cats.join("・")} を1品ずつ入れてください。`, "menu-retry"));
         draft = cleanMenu(m, req);
       }
-      st.textContent = "";
-      out.append(menuView(draft), h("div", { class: "actions" },
-        h("button", { class: "btn", type: "button", onclick: suggest }, "別の献立"),
-        h("button", { class: "btn primary", type: "button", onclick: saveDraft }, "献立をレシピ帳に保存")));
+      showDraft(draft); await pushHistory(draft); track("menu", cats.join("+"));
       return;
     }
     let d = parseJSON(await askAI(buildPrompt(req), "suggest"));
@@ -477,10 +570,7 @@ async function suggest() {
       d = parseJSON(await askAI(buildPrompt(req) + `\n前回はカテゴリに合わない料理でした。必ず「${req.cat}」の料理にしてください。`, "retry"));
       draft = cleanDraft(d, req);
     }
-    st.textContent = "";
-    out.append(recipeView(draft), h("div", { class: "actions" },
-      h("button", { class: "btn", type: "button", onclick: suggest }, "別の案"),
-      h("button", { class: "btn primary", type: "button", onclick: saveDraft }, "レシピ帳に保存")));
+    showDraft(draft); await pushHistory(draft); track("suggest", req.cat || "おまかせ");
   } catch (e) {
     st.className = "status err"; st.textContent = aiErrorText(e);
   } finally { btn.disabled = false; }
@@ -490,7 +580,9 @@ async function saveDraft() {
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   try {
     await store.set((draft.kind === "menu" ? "menu:" : "recipe:") + id, { ...draft, createdAt: Date.now() });
-    toast("レシピ帳に保存しました"); draft = null; $("s-out").textContent = "";
+    toast("レシピ帳に保存しました"); track("save", draft.kind === "menu" ? "menu" : "recipe");
+    const hi = histList.findIndex(x => x.d === draft); if (hi >= 0) { histList[hi].saved = true; try { await store.set("history", histList); } catch {} }
+    draft = null; viewing = -1; $("s-out").textContent = ""; renderHistory();
     await loadRecipes();
   } catch { toast("保存できませんでした。もう一度試してください。"); }
 }
@@ -557,6 +649,7 @@ async function addPhoto(r, file) {
   const path = `photos/${r.key.replace(":", "-")}-${Date.now()}.jpg`;
   await puter.fs.write(path, blob, { createMissingParents: true });
   const next = { ...recordOf(r), photos: [...arr(r.photos), { path, at: Date.now() }] };
+  track("photo");
   await store.set(r.key, next);
   return { ...next, key: r.key };
 }
@@ -622,7 +715,7 @@ function openForm(r) {
       const file = photo.files && photo.files[0];
       if (file) { try { saved = await addPhoto(saved, file); } catch { toast("レシピは保存しましたが、写真は保存できませんでした"); } }
       await loadRecipes();
-      toast(r ? "変更を保存しました" : "レシピ帳に追加しました");
+      toast(r ? "変更を保存しました" : "レシピ帳に追加しました"); if (!r) track("manual");
       openRecipe(saved);
     } catch { st.className = "status err"; st.textContent = "保存できませんでした。もう一度試してください。"; save.disabled = false; }
   } }, r ? "変更を保存" : "レシピ帳に追加");
@@ -656,6 +749,7 @@ async function saveKitchen() {
 
 /* ===== tabs, sign-in, boot ===== */
 function showTab(name) {
+  currentTab = name;
   document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
   document.querySelectorAll("[data-view]").forEach(v => { v.hidden = v.dataset.view !== name; });
   if (name === "usage") showPuterUsage();
@@ -663,7 +757,8 @@ function showTab(name) {
 async function enterApp() {
   $("welcome").hidden = true; $("app").hidden = false; $("btn-out").hidden = false;
   try { const u = await puter.auth.getUser(); $("who").textContent = u && u.username ? `${u.username} さん` : ""; } catch {}
-  await Promise.all([loadKitchen(), loadRecipes(), loadUsage()]);
+  await Promise.all([loadKitchen(), loadRecipes(), loadUsage(), loadPrefs(), loadHistory()]);
+  trackOpenOncePerDay();
 }
 function showWelcome(msg) {
   $("app").hidden = true; $("welcome").hidden = false; $("btn-out").hidden = true; $("who").textContent = "";
@@ -686,6 +781,8 @@ $("ver-foot").append("うちのレシピ帳 β　バージョン ", h("b", {}, A
 $("s-go").addEventListener("click", suggest);
 $("k-save").addEventListener("click", saveKitchen);
 $("b-add").addEventListener("click", () => openForm(null));
+$("fb-open").addEventListener("click", openFeedback);
+$("u-share").addEventListener("change", async (e) => { shareUsage = e.target.checked; try { await store.set("shareUsage", shareUsage); } catch {} toast(shareUsage ? "利用状況を送ります" : "利用状況を送らないようにしました"); });
 $("btn-in").addEventListener("click", async () => {
   $("welcome-status").textContent = "Puter のログイン画面を開いています…";
   try { await puter.auth.signIn(); await enterApp(); }

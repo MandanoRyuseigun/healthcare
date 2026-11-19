@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>うちのレシピ帳 β 管理</title>
+<style>
+:root { --bg: #f5f7f2; --surface: #ffffff; --sunk: #ebefe6; --ink: #1d2620; --muted: #5d6a60; --line: #d6ddd0; --herb: #2e7a4c; --herb-soft: #dcebdf; --kabocha: #b4600f; --danger: #b3342b; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root { --bg: #141a16; --surface: #1c241f; --sunk: #232d27; --ink: #e8eee8; --muted: #a2b0a5; --line: #314037; --herb: #6cc391; --herb-soft: #23392b; --kabocha: #f0a35e; --danger: #f08a80; color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif; font-size: 15px; line-height: 1.7; }
+.wrap { max-width: 960px; margin: 0 auto; padding: 24px max(16px, env(safe-area-inset-left, 0px)) 64px max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 18px; }
+h1 { font-size: 1.4rem; margin: 0; }
+h2 { font-size: 1.1rem; margin: 0 0 8px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; min-width: 0; }
+.hint { font-size: .82rem; color: var(--muted); margin: 0; }
+.drop { border: 2px dashed var(--herb); border-radius: 12px; padding: 22px; text-align: center; color: var(--herb); background: var(--surface); }
+.drop.over { background: var(--herb-soft); }
+.drop input { margin-top: 10px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.tile { background: var(--sunk); border-radius: 10px; padding: 12px; }
+.tile b { display: block; font-size: 1.6rem; color: var(--herb); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.tile span { font-size: .78rem; color: var(--muted); }
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .85rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--muted); font-weight: 500; }
+.fb { border-bottom: 1px solid var(--line); padding: 10px 0; }
+.fb:last-child { border-bottom: 0; }
+.fb .meta { font-size: .78rem; color: var(--muted); }
+.fb p { margin: 4px 0 0; white-space: pre-wrap; }
+.tag { display: inline-block; font-size: .75rem; color: var(--kabocha); border: 1px solid var(--kabocha); border-radius: 4px; padding: 0 6px; margin-right: 6px; }
+.ok { color: var(--herb); font-weight: 500; }
+.err { color: var(--danger); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1>うちのレシピ帳 β 管理</h1>
+    <p class="hint">Netlify からダウンロードした CSV を読み込んで集計します。データはこのブラウザの中だけで扱い、どこにも送りません。</p>
+  </div>
+
+  <label class="drop" id="drop">
+    <b>CSV ファイルをここにドラッグ</b>（「usage」と「feedback」の両方を一度に入れられます）<br>
+    <input type="file" id="files" accept=".csv,text/csv" multiple>
+  </label>
+  <p class="hint" id="status"></p>
+
+  <section class="panel" id="summary" hidden>
+    <h2>全体</h2>
+    <div class="tiles" id="tiles"></div>
+    <p class="hint" id="range" style="margin-top:8px"></p>
+  </section>
+
+  <section class="panel" id="users" hidden>
+    <h2>利用者ごと</h2>
+    <p class="hint">「直近14日の利用日数」が4日以上なら、週2回以上使っている目安です（判断1の基準）。推定クレジットは 1品×6・献立×17 で計算。</p>
+    <div class="scroll"><table id="t-users"></table></div>
+  </section>
+
+  <section class="panel" id="days" hidden>
+    <h2>日ごと</h2>
+    <div class="scroll"><table id="t-days"></table></div>
+  </section>
+
+  <section class="panel" id="versions" hidden>
+    <h2>バージョンごと</h2>
+    <div class="scroll"><table id="t-versions"></table></div>
+  </section>
+
+  <section class="panel" id="feedback" hidden>
+    <h2>ご意見・不具合</h2>
+    <div id="fb-list"></div>
+  </section>
+
+  <section class="panel">
+    <h2>CSV の取り出し方</h2>
+    <ol class="hint" style="font-size:.9rem">
+      <li>Netlify にログインし、ベータのサイトを開く</li>
+      <li>「Forms」を開き、「usage」（利用状況）か「feedback」（ご意見）を選ぶ</li>
+      <li>「Download as CSV」などのボタンで CSV を保存する</li>
+      <li>このページに CSV をドラッグする</li>
+    </ol>
+  </section>
+</div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const EVENTS = [["open", "開いた日"], ["suggest", "1品"], ["menu", "献立"], ["save", "保存"], ["manual", "手入力"], ["photo", "写真"]];
+
+function parseCSV(text) {
+  const rows = []; let row = [], cell = "", q = false;
+  text = text.replace(/^﻿/, "");
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+    else if (c === '"') q = true;
+    else if (c === ",") { row.push(cell); cell = ""; }
+    else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(cell); rows.push(row); row = []; cell = ""; }
+    else cell += c;
+  }
+  if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+  const head = (rows.shift() || []).map(h => h.trim().toLowerCase());
+  return rows.filter(r => r.some(x => x.trim() !== "")).map(r => Object.fromEntries(head.map((h, i) => [h, (r[i] || "").trim()])));
+}
+function dateOf(r) {
+  const raw = r.created_at || r["created at"] || r.date || r.submitted_at || r["submitted at"] || r.timestamp || "";
+  const t = Date.parse(raw);
+  if (!Number.isNaN(t)) return new Date(t);
+  if (r.event === "open" && /^\d{4}-\d{2}-\d{2}$/.test(r.detail || "")) return new Date(r.detail + "T00:00:00");
+  return null;
+}
+const ymd = (d) => d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}` : "日付なし";
+
+let usage = [], feedback = [];
+async function load(files) {
+  const msgs = [];
+  for (const f of files) {
+    const rows = parseCSV(await f.text());
+    if (!rows.length) { msgs.push(`${f.name}：中身がありません`); continue; }
+    if ("event" in rows[0]) { usage = usage.concat(rows); msgs.push(`${f.name}：利用状況 ${rows.length} 件`); }
+    else if ("message" in rows[0]) { feedback = feedback.concat(rows); msgs.push(`${f.name}：ご意見 ${rows.length} 件`); }
+    else msgs.push(`${f.name}：「event」も「message」の列もないため、読み込めませんでした`);
+  }
+  $("status").innerHTML = msgs.map(esc).join("<br>");
+  render();
+}
+
+function render() {
+  if (usage.length) {
+    const ev = usage.map(r => ({ ...r, d: dateOf(r) }));
+    const dated = ev.filter(x => x.d).sort((a, b) => a.d - b.d);
+    const uids = [...new Set(ev.map(x => x.uid).filter(Boolean))];
+    const cnt = (list, e) => list.filter(x => x.event === e).length;
+    const credits = (list) => cnt(list, "suggest") * 6 + cnt(list, "menu") * 17;
+    $("summary").hidden = false;
+    $("tiles").innerHTML = [["利用者数", uids.length], ...EVENTS.slice(1).map(([k, l]) => [l, cnt(ev, k)]), ["推定クレジット合計", credits(ev)]]
+      .map(([l, n]) => `<div class="tile"><b>${esc(n)}</b><span>${esc(l)}</span></div>`).join("");
+    $("range").textContent = dated.length ? `期間：${ymd(dated[0].d)} 〜 ${ymd(dated[dated.length - 1].d)}（${ev.length} 件）` : `日付の列が見つかりませんでした（${ev.length} 件）`;
+
+    const now = dated.length ? dated[dated.length - 1].d : new Date();
+    const since = new Date(now.getTime() - 13 * 864e5); since.setHours(0, 0, 0, 0);
+    $("users").hidden = false;
+    $("t-users").innerHTML = `<tr><th>利用者（番号）</th><th>使った日数</th><th>直近14日の利用日数</th>${EVENTS.slice(1).map(([, l]) => `<th>${l}</th>`).join("")}<th>推定クレジット</th><th>最後に使った日</th><th>バージョン</th></tr>` +
+      uids.map(u => {
+        const mine = ev.filter(x => x.uid === u);
+        const days = new Set(mine.filter(x => x.d).map(x => ymd(x.d)));
+        const recent = new Set(mine.filter(x => x.d && x.d >= since).map(x => ymd(x.d)));
+        const last = mine.filter(x => x.d).sort((a, b) => b.d - a.d)[0];
+        const vers = [...new Set(mine.map(x => x.version).filter(Boolean))].sort().reverse();
+        return `<tr><td>${esc(u)}</td><td>${days.size}</td><td class="${recent.size >= 4 ? "ok" : ""}">${recent.size}</td>${EVENTS.slice(1).map(([k]) => `<td>${cnt(mine, k)}</td>`).join("")}<td>${credits(mine)}</td><td>${last ? ymd(last.d) : "-"}</td><td>${esc(vers[0] || "-")}</td></tr>`;
+      }).join("");
+
+    const byDay = new Map();
+    for (const x of ev) { const k = ymd(x.d); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(x); }
+    $("days").hidden = false;
+    $("t-days").innerHTML = `<tr><th>日付</th><th>利用者数</th>${EVENTS.slice(1).map(([, l]) => `<th>${l}</th>`).join("")}</tr>` +
+      [...byDay.keys()].sort().reverse().map(k => { const l = byDay.get(k); return `<tr><td>${esc(k)}</td><td>${new Set(l.map(x => x.uid)).size}</td>${EVENTS.slice(1).map(([e]) => `<td>${cnt(l, e)}</td>`).join("")}</tr>`; }).join("");
+
+    const byVer = new Map();
+    for (const x of ev) { const k = x.version || "不明"; byVer.set(k, (byVer.get(k) || new Set()).add(x.uid)); }
+    $("versions").hidden = false;
+    $("t-versions").innerHTML = `<tr><th>バージョン</th><th>使った利用者数</th></tr>` + [...byVer.keys()].sort().reverse().map(k => `<tr><td>${esc(k)}</td><td>${byVer.get(k).size}</td></tr>`).join("");
+  }
+  if (feedback.length) {
+    $("feedback").hidden = false;
+    const list = feedback.map(r => ({ ...r, d: dateOf(r) })).sort((a, b) => (b.d || 0) - (a.d || 0));
+    $("fb-list").innerHTML = list.map(r => `<div class="fb"><div class="meta"><span class="tag">${esc(r.kind || "その他")}</span>${esc(r.d ? ymd(r.d) : "")}　v${esc(r.version || "?")}　画面：${esc(r.screen || "-")}　番号：${esc(r.uid || "-")}</div><p>${esc(r.message)}</p></div>`).join("");
+  }
+}
+
+$("files").addEventListener("change", (e) => load([...e.target.files]));
+const drop = $("drop");
+drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", (e) => { e.preventDefault(); drop.classList.remove("over"); load([...e.dataTransfer.files]); });
+</script>
+</body>
+</html>
