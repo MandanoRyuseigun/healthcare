@@ -28,7 +28,7 @@ doc_id は英数字とハイフン（例 `torimune-shoga-itame`）。
 | note | string | コツ・保存方法など |
 | favorite | boolean | お気に入り（新規は false） |
 | source | string | `claude`（チャットで登録）/ `ai`（ページ内の提案）/ `manual`（手入力） |
-| shopping | {item, amount, price, why, without}[] | 買い足すもの（任意）。price はおおよその円、why は買う理由、without は買わずに作る方法 |
+| shopping | {item, amount, price, why, without, store, storeDays}[] | 買い足すもの（任意）。price はおおよその円、why は買う理由、without は買わずに作る方法、store は残った分の保存方法、storeDays は保存期間の目安（例「冷蔵2〜3日・冷凍1か月」） |
 | budget | number \| "free" | 提案時の買い足し予算（円）。0 は買い足さない、"free" は気にしない（任意） |
 | createdAt | number | ミリ秒の Unix 時刻。一覧はこの新しい順なので必須 |
 | updatedAt | number | 更新時のミリ秒の Unix 時刻 |
@@ -56,4 +56,5 @@ doc_id は英数字とハイフン（例 `torimune-shoga-itame`）。
 
 提案のときは、家にある食材と `settings/kitchen` の常備品にないものを、買い足し予算の範囲で買うか考える。
 買わなくてもおいしく作れるならそちらを優先し、買う場合は `shopping` におおよその値段・買う理由・買わずに作る方法を入れる。合計が予算をこえないようにする。
+買い足すものには、残った分の保存方法（store）と保存期間の目安（storeDays）も必ず入れる。
 チャットで予算が分からないときは聞く。
