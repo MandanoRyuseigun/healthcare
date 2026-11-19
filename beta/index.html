@@ -75,6 +75,18 @@ main { padding-block: 16px 64px; display: grid; gap: 16px; }
 .card:hover { border-color: var(--herb); }
 .card:focus-visible { outline: 2px solid var(--herb); outline-offset: 2px; }
 .card h3 { font-family: var(--display); font-size: 1.05rem; margin: 0; }
+.card.has-photo { grid-template-columns: 72px 1fr; column-gap: 12px; align-items: center; }
+.card.has-photo .thumb { grid-row: span 3; }
+.thumb { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; background: var(--sunk); }
+.photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.photo { position: relative; margin: 0; }
+.photo img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: var(--sunk); display: block; }
+.photo figcaption { font-size: .75rem; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+.photo button { border: 0; background: none; color: var(--danger); font-size: .75rem; padding: 2px 4px; }
+.file-btn { display: inline-flex; align-items: center; border: 1px dashed var(--herb); color: var(--herb); border-radius: 999px; padding: 8px 16px; font-weight: 500; cursor: pointer; }
+.file-btn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.book-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
+.book-head .btn { white-space: nowrap; flex: none; }
 .meta { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .empty { border: 1.5px dashed var(--line); border-radius: 12px; padding: 24px 16px; text-align: center; color: var(--muted); }
 
@@ -156,6 +168,7 @@ dialog::backdrop { background: rgba(10, 16, 12, .45); }
       </section>
 
       <section data-view="book" hidden>
+        <div class="book-head"><span class="hint">提案から保存したものと、手入力したものが並びます。</span><button class="btn primary" id="b-add" type="button">手入力で追加</button></div>
         <div class="list" id="list"></div>
       </section>
 
@@ -483,23 +496,141 @@ async function loadRecipes() {
 function renderBook() {
   $("count").textContent = recipes.length ? `(${recipes.length})` : "";
   const list = $("list"); list.textContent = "";
-  if (!recipes.length) { list.append(h("div", { class: "empty" }, "まだレシピも献立もありません。「提案」で考えてもらって保存すると、ここに並びます。")); return; }
-  for (const r of recipes) list.append(r.kind === "menu"
-    ? h("button", { class: "card", type: "button", onclick: () => openRecipe(r) },
-        h("div", {}, h("span", { class: "pill menu" }, "献立")), h("h3", {}, r.title),
-        h("div", { class: "meta" }, h("span", {}, arr(r.dishes).map(d => d.name).join("／")), h("span", {}, `${r.servings}人分`)))
-    : h("button", { class: "card", type: "button", onclick: () => openRecipe(r) },
-        h("h3", {}, r.name), h("div", { class: "meta" }, r.category ? h("span", {}, r.category) : null, r.minutes ? h("span", {}, `${r.minutes}分`) : null, r.servings ? h("span", {}, `${r.servings}人分`) : null)));
+  if (!recipes.length) { list.append(h("div", { class: "empty" }, "まだレシピも献立もありません。「提案」で考えてもらって保存するか、「手入力で追加」で手持ちのレシピを登録すると、ここに並びます。")); return; }
+  for (const r of recipes) {
+    const ph = arr(r.photos);
+    const thumb = ph.length ? h("img", { class: "thumb", alt: "" }) : null;
+    if (thumb) photoURL(ph[ph.length - 1].path).then(u => { thumb.src = u; }).catch(() => {});
+    list.append(r.kind === "menu"
+      ? h("button", { class: "card" + (thumb ? " has-photo" : ""), type: "button", onclick: () => openRecipe(r) }, thumb,
+          h("div", {}, h("span", { class: "pill menu" }, "献立")), h("h3", {}, r.title),
+          h("div", { class: "meta" }, h("span", {}, arr(r.dishes).map(d => d.name).join("／")), h("span", {}, `${r.servings}人分`)))
+      : h("button", { class: "card" + (thumb ? " has-photo" : ""), type: "button", onclick: () => openRecipe(r) }, thumb,
+          h("div", { class: "meta" }, r.category ? h("span", {}, r.category) : null, r.source === "manual" ? h("span", {}, "手入力") : null),
+          h("h3", {}, r.name), h("div", { class: "meta" }, r.minutes ? h("span", {}, `${r.minutes}分`) : null, r.servings ? h("span", {}, `${r.servings}人分`) : null)));
+  }
 }
+const recordOf = (r) => { const { key, ...rest } = r; return rest; };
 function openRecipe(r) {
   const body = $("dlg-body"); body.textContent = "";
   let armed = false;
   const del = h("button", { class: "btn danger", type: "button", onclick: async () => {
     if (!armed) { armed = true; del.textContent = "もう一度押すと削除"; return; }
-    try { await store.del(r.key); $("dlg").close(); toast("削除しました"); await loadRecipes(); } catch { toast("削除できませんでした"); }
+    try {
+      for (const p of arr(r.photos)) { try { await puter.fs.delete(p.path); } catch {} }
+      await store.del(r.key); $("dlg").close(); toast("削除しました"); await loadRecipes();
+    } catch { toast("削除できませんでした"); }
   } }, "削除");
-  body.append(r.kind === "menu" ? menuView(r) : recipeView(r), h("div", { class: "actions" }, del, h("button", { class: "btn primary", type: "button", onclick: () => $("dlg").close() }, "閉じる")));
-  $("dlg").showModal();
+  body.append(r.kind === "menu" ? menuView(r) : recipeView(r), photoSection(r),
+    h("div", { class: "actions" }, del,
+      r.kind === "menu" ? null : h("button", { class: "btn", type: "button", onclick: () => openForm(r) }, "編集"),
+      h("button", { class: "btn primary", type: "button", onclick: () => $("dlg").close() }, "閉じる")));
+  if (!$("dlg").open) $("dlg").showModal();
+}
+
+/* ===== photos (stored in the user's Puter files) ===== */
+const photoCache = new Map();
+async function photoURL(path) {
+  if (photoCache.has(path)) return photoCache.get(path);
+  const blob = await puter.fs.read(path);
+  const url = URL.createObjectURL(blob);
+  photoCache.set(path, url);
+  return url;
+}
+async function shrinkImage(file) {
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, 1280 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  return await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error("toBlob")), "image/jpeg", 0.8));
+}
+async function addPhoto(r, file) {
+  const blob = await shrinkImage(file);
+  const path = `photos/${r.key.replace(":", "-")}-${Date.now()}.jpg`;
+  await puter.fs.write(path, blob, { createMissingParents: true });
+  const next = { ...recordOf(r), photos: [...arr(r.photos), { path, at: Date.now() }] };
+  await store.set(r.key, next);
+  return { ...next, key: r.key };
+}
+async function removePhoto(r, path) {
+  try { await puter.fs.delete(path); } catch {}
+  const next = { ...recordOf(r), photos: arr(r.photos).filter(p => p.path !== path) };
+  await store.set(r.key, next);
+  return { ...next, key: r.key };
+}
+function photoSection(r) {
+  const st = h("p", { class: "status", role: "status" });
+  const input = h("input", { type: "file", accept: "image/*", id: "photo-input" });
+  input.addEventListener("change", async () => {
+    const f = input.files && input.files[0]; if (!f) return;
+    st.className = "status"; st.textContent = "写真を保存しています…";
+    try { const nr = await addPhoto(r, f); await loadRecipes(); openRecipe(nr); toast("写真を追加しました"); }
+    catch { st.className = "status err"; st.textContent = "写真を保存できませんでした。もう一度試してください。"; }
+  });
+  const grid = h("div", { class: "photos" });
+  for (const p of [...arr(r.photos)].reverse()) {
+    const img = h("img", { alt: "作った料理の写真" });
+    photoURL(p.path).then(u => { img.src = u; }).catch(() => { img.alt = "写真を読み込めませんでした"; });
+    const d = new Date(p.at);
+    grid.append(h("figure", { class: "photo" }, img, h("figcaption", {}, `${d.getMonth() + 1}/${d.getDate()}`,
+      h("button", { type: "button", onclick: async () => { try { const nr = await removePhoto(r, p.path); await loadRecipes(); openRecipe(nr); } catch { toast("写真を消せませんでした"); } } }, "削除"))));
+  }
+  return h("div", {}, h("h4", { style: "font-family:var(--display);margin:0 0 8px" }, "作った料理の写真"),
+    arr(r.photos).length ? grid : h("p", { class: "hint" }, "作ったら写真を残しておけます。"),
+    h("div", { style: "margin-top:10px" }, h("label", { class: "file-btn" }, input, "写真を追加")), st);
+}
+
+/* ===== manual recipe (add / edit) ===== */
+function parseIng(line) {
+  const m = line.match(/^(.*?)[\s　:：]+([^\s　:：].*)$/);
+  return m ? { item: m[1].trim(), amount: m[2].trim() } : { item: line, amount: "" };
+}
+function openForm(r) {
+  const body = $("dlg-body"); body.textContent = "";
+  const f = (id, label, el, hint) => h("div", { class: "field" }, h("label", { for: id }, label), el, hint ? h("p", { class: "hint" }, hint) : null);
+  const name = h("input", { id: "m-name", maxlength: "80", value: r ? r.name : "" });
+  const cat = h("select", { id: "m-cat" }, h("option", { value: "" }, "決めない"), ...CATS.map(c => h("option", { value: c, selected: r && r.category === c }, c)));
+  const srv = h("select", { id: "m-srv" }, ...[1, 2, 3, 4, 5, 6].map(n => h("option", { value: String(n), selected: n === ((r && r.servings) || kitchen.servings || 1) }, `${n}人分`)));
+  const min = h("input", { id: "m-min", type: "number", min: "1", inputmode: "numeric", value: r && r.minutes ? r.minutes : "" });
+  const ing = h("textarea", { id: "m-ing", rows: "6", placeholder: "鶏むね肉 300g\nしょうゆ 大さじ1\n生姜 少々" }); ing.value = r ? arr(r.ingredients).map(i => `${i.item}${i.amount ? " " + i.amount : ""}`).join("\n") : "";
+  const stp = h("textarea", { id: "m-steps", rows: "6", placeholder: "鶏むね肉をひと口大に切る\nフライパンで焼く" }); stp.value = r ? arr(r.steps).join("\n") : "";
+  const note = h("textarea", { id: "m-note", rows: "2", placeholder: "例：母のレシピ。少し甘め" }); note.value = r ? r.note || "" : "";
+  const photo = h("input", { type: "file", accept: "image/*", id: "m-photo" });
+  const st = h("p", { class: "status", role: "status" });
+  const save = h("button", { class: "btn primary", type: "button", onclick: async () => {
+    const data = {
+      name: name.value.trim(), category: cat.value, servings: Number(srv.value), minutes: num(min.value),
+      ingredients: ing.value.split("\n").map(l => l.trim()).filter(Boolean).map(parseIng),
+      steps: stp.value.split("\n").map(l => l.replace(/^\s*\d+[.．)）、]\s*/, "").trim()).filter(Boolean),
+      note: note.value.trim(),
+    };
+    if (!data.name) { st.className = "status err"; st.textContent = "料理名を入れてください。"; name.focus(); return; }
+    save.disabled = true; st.className = "status"; st.textContent = "保存しています…";
+    try {
+      const key = r ? r.key : "recipe:" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      const rec = r ? { ...recordOf(r), ...data, updatedAt: Date.now() } : { ...data, source: "manual", createdAt: Date.now() };
+      await store.set(key, rec);
+      let saved = { ...rec, key };
+      const file = photo.files && photo.files[0];
+      if (file) { try { saved = await addPhoto(saved, file); } catch { toast("レシピは保存しましたが、写真は保存できませんでした"); } }
+      await loadRecipes();
+      toast(r ? "変更を保存しました" : "レシピ帳に追加しました");
+      openRecipe(saved);
+    } catch { st.className = "status err"; st.textContent = "保存できませんでした。もう一度試してください。"; save.disabled = false; }
+  } }, r ? "変更を保存" : "レシピ帳に追加");
+  body.append(h("h3", { style: "font-family:var(--display);margin:0" }, r ? "レシピを編集" : "手持ちのレシピを追加"),
+    f("m-name", "料理名", name),
+    h("div", { class: "row2" }, f("m-cat", "カテゴリ", cat), f("m-srv", "何人分", srv)),
+    f("m-min", "調理時間（分）", min),
+    f("m-ing", "材料", ing, "1行に1つ。材料名と分量のあいだにスペースを入れます。"),
+    f("m-steps", "作り方", stp, "1行に1手順。番号は付けなくても大丈夫です。"),
+    f("m-note", "メモ", note),
+    r ? null : h("div", { class: "field" }, h("span", { class: "lab" }, "写真（あとからでも追加できます）"), h("label", { class: "file-btn" }, photo, "写真を選ぶ")),
+    st,
+    h("div", { class: "actions" }, h("button", { class: "btn", type: "button", onclick: () => r ? openRecipe(r) : $("dlg").close() }, "やめる"), save));
+  if (!$("dlg").open) $("dlg").showModal();
+  setTimeout(() => name.focus(), 50);
 }
 
 /* ===== kitchen ===== */
@@ -545,6 +676,7 @@ $("s-bud").append(...BUDGETS.map(([v, l]) => h("option", { value: v, selected: v
 document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
 $("s-go").addEventListener("click", suggest);
 $("k-save").addEventListener("click", saveKitchen);
+$("b-add").addEventListener("click", () => openForm(null));
 $("btn-in").addEventListener("click", async () => {
   $("welcome-status").textContent = "Puter のログイン画面を開いています…";
   try { await puter.auth.signIn(); await enterApp(); }
