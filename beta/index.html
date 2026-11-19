@@ -57,6 +57,13 @@ main { padding-block: 16px 64px; display: grid; gap: 16px; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .status { font-size: .9rem; color: var(--muted); margin: 0; }
 .status.err { color: var(--danger); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 14px; font-size: .9rem; color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--herb); border-color: var(--herb); color: var(--herb-ink); }
+.lab { font-size: .82rem; font-weight: 500; color: var(--muted); }
+.lab small { font-weight: 400; }
+.dish { border-top: 1px solid var(--line); padding-top: 14px; }
+.pill.menu { color: var(--kabocha); background: var(--kabocha-soft); }
 .pill { display: inline-block; font-size: .75rem; color: var(--herb); background: var(--herb-soft); border-radius: 999px; padding: 1px 10px; }
 
 .welcome { display: grid; gap: 12px; }
@@ -137,10 +144,10 @@ dialog::backdrop { background: rgba(10, 16, 12, .45); }
         <h2>提案してもらう <span class="pill">節約モード</span></h2>
         <div class="field"><label for="s-ing">家にある食材・使いたい食材</label><input id="s-ing" placeholder="例：鶏むね肉、キャベツ、卵"></div>
         <div class="row2">
-          <div class="field"><label for="s-srv">人数</label><select id="s-srv"><option value="1" selected>1人分</option><option value="2">2人分</option></select></div>
-          <div class="field"><label for="s-cat">カテゴリ</label><select id="s-cat"></select></div>
+          <div class="field"><label for="s-srv">何人分</label><select id="s-srv"></select></div>
+          <div class="field"><label for="s-bud">買い足し予算</label><select id="s-bud"></select></div>
         </div>
-        <div class="field"><label for="s-bud">足りない食材の買い足し予算</label><select id="s-bud"></select></div>
+        <div class="field"><span class="lab" id="s-cats-lab">作るもの <small>（2つ以上選ぶと献立になります。選ばなければおまかせで1品）</small></span><div class="chips" id="s-cats" role="group" aria-labelledby="s-cats-lab"></div></div>
         <div class="field"><label for="s-free">ほかに伝えたいこと</label><textarea id="s-free" rows="2" placeholder="例：10分で作りたい、明日の弁当にも回したい"></textarea></div>
         <p class="hint" id="s-kit"></p>
         <div class="actions"><button class="btn primary" id="s-go" type="button">提案してもらう</button></div>
@@ -155,6 +162,7 @@ dialog::backdrop { background: rgba(10, 16, 12, .45); }
       <section data-view="kitchen" class="panel" hidden>
         <h2>うちの調理環境</h2>
         <div class="field"><label for="k-eq">調理器具・設備</label><textarea id="k-eq" rows="3" placeholder="例：IHコンロ1口、電子レンジ、炊飯器、フライパン、魚焼きグリルなし"></textarea></div>
+        <div class="field"><label for="k-srv">いつも作る人数</label><select id="k-srv"></select></div>
         <div class="field"><label for="k-pa">いつも家にある食材・調味料</label><textarea id="k-pa" rows="2" placeholder="例：しょうゆ、みりん、味噌、めんつゆ、チューブ生姜、ごま油、卵"></textarea></div>
         <p class="hint">提案のとき、ここにある器具だけで作れる料理にし、常備品を活かします。</p>
         <div class="actions"><button class="btn primary" id="k-save" type="button">保存</button></div>
@@ -220,14 +228,14 @@ const store = {
   async get(key) { const v = await puter.kv.get(key); if (v == null) return null; try { return typeof v === "string" ? JSON.parse(v) : v; } catch { return v; } },
   async set(key, value) { await puter.kv.set(key, JSON.stringify(value)); },
   async del(key) { await puter.kv.del(key); },
-  async listRecipes() {
-    const res = await puter.kv.list("recipe:*", true);
+  async list(prefix) {
+    const res = await puter.kv.list(prefix + "*", true);
     const out = [];
     for (const item of arr(res)) {
-      if (typeof item === "string") { const v = await store.get(item); if (v) out.push({ ...v, id: item.slice(7) }); }
-      else if (item && item.key) { let v = item.value; try { if (typeof v === "string") v = JSON.parse(v); } catch {} if (v) out.push({ ...v, id: String(item.key).slice(7) }); }
+      if (typeof item === "string") { const v = await store.get(item); if (v) out.push({ ...v, key: item }); }
+      else if (item && item.key) { let v = item.value; try { if (typeof v === "string") v = JSON.parse(v); } catch {} if (v) out.push({ ...v, key: String(item.key) }); }
     }
-    return out.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    return out;
   },
 };
 
@@ -281,7 +289,7 @@ function renderUsage() {
   $("u-in").textContent = usage.calls ? Math.round(usage.inChars / usage.calls).toLocaleString() : 0;
   $("u-out").textContent = usage.calls ? Math.round(usage.outChars / usage.calls).toLocaleString() : 0;
   const tb = $("u-log"); tb.textContent = "";
-  const kindName = { suggest: "提案", retry: "提案（再試行）" };
+  const kindName = { suggest: "1品", retry: "1品（再試行）", menu: "献立", "menu-retry": "献立（再試行）" };
   for (const r of arr(usage.log).slice(0, 30)) {
     const d = new Date(r.at);
     tb.append(h("tr", {}, h("td", {}, `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`),
@@ -299,7 +307,8 @@ async function showPuterUsage() {
 }
 
 /* ===== state ===== */
-let kitchen = { equipment: "", pantry: "" };
+let kitchen = { equipment: "", pantry: "", servings: 1 };
+let picked = [];
 let recipes = [];
 let draft = null;
 
@@ -336,6 +345,64 @@ function buildPrompt(req) {
     "手順は3〜7個にしてください。",
   ].filter(Boolean).join("\n");
 }
+function buildMenuPrompt(req) {
+  return [
+    "一人暮らしや家庭の料理初心者向けに、1食分の献立を日本語で考えてください。材料はスーパーで手に入るもので、手順は初心者にも分かる言葉にしてください。",
+    `献立に入れる料理: ${req.cats.map(c => `${c}（${CAT_DEF[c]}）`).join("、")}。この${req.cats.length}品をそれぞれ1品ずつ。`,
+    req.ing ? `使いたい食材: ${req.ing}` : "使いたい食材: 特になし",
+    "同じ食材を複数の料理で使い回して、買った食材をなるべく使い切れるようにしてください。",
+    `人数: ${req.servings}人分（分量はすべてこの人数分）`,
+    req.free ? `補足: ${req.free}` : "",
+    budgetLine(req.budget).replace("合計", "献立全体の合計"),
+    kitchenText() ? `${kitchenText()}\nここに書かれた器具だけで作れる献立にし、家にある食材・調味料をなるべく活かしてください。コンロの口数が少ない場合は同時に使えないことを考えてください。` : "",
+    "鶏肉・豚肉・ひき肉・魚・卵を使うときは、中まで火を通す目安を手順に書いてください。健康や体への効果はうたわないでください。",
+    "plan には、一人で全部を作るときの段取り（どれから手をつけ、何を同時に進めるか）を3〜6個で書いてください。",
+    "",
+    "次の形のJSONオブジェクトだけを返してください。説明文は不要です。",
+    `{"title":"献立名","totalMinutes":全部作る分数,"plan":["段取り"],"dishes":[{"category":"${req.cats.join("|")}のどれか","name":"料理名","minutes":分,"kcal":1人分のkcal,"ingredients":[{"item":"材料名","amount":"分量"}],"steps":["手順"],"note":"コツ"}],"shopping":[{"item":"買い足す食材","amount":"買う量","price":円,"why":"買う理由","without":"買わずに作る方法","store":"残りの保存方法","storeDays":"保存期間の目安"}]}`,
+    "dishes は指定した料理の順に、各料理の手順は3〜6個にしてください。",
+  ].filter(Boolean).join("\n");
+}
+function cleanShop(list, budget) {
+  return budget === "0" ? [] : arr(list).filter(x => x && x.item).slice(0, 10).map(x => ({ item: String(x.item), amount: String(x.amount || ""), price: num(x.price), why: String(x.why || ""), without: String(x.without || ""), store: String(x.store || ""), storeDays: String(x.storeDays || "") }));
+}
+function cleanDish(d, cat, servings) {
+  return {
+    name: String(d.name || "名前のない料理").slice(0, 80), category: cat || (CATS.includes(d.category) ? d.category : ""),
+    minutes: num(d.minutes), servings, kcal: num(d.kcal),
+    ingredients: arr(d.ingredients).filter(i => i && i.item).slice(0, 30).map(i => ({ item: String(i.item), amount: String(i.amount || "") })),
+    steps: arr(d.steps).map(String).filter(Boolean).slice(0, 12), note: d.note ? String(d.note) : "",
+  };
+}
+function cleanMenu(d, req) {
+  if (!d || typeof d !== "object" || !Array.isArray(d.dishes)) throw { code: "invalid_json" };
+  const used = new Set();
+  const dishes = req.cats.map(c => { const i = d.dishes.findIndex((x, k) => x && x.category === c && !used.has(k)); if (i < 0) return null; used.add(i); return cleanDish(d.dishes[i], c, req.servings); });
+  if (dishes.some(x => !x)) throw { code: "wrong_category" };
+  return { kind: "menu", title: String(d.title || dishes.map(x => x.name).join("と")).slice(0, 80), totalMinutes: num(d.totalMinutes), servings: req.servings,
+    plan: arr(d.plan).map(String).filter(Boolean).slice(0, 10), shopping: cleanShop(d.shopping, req.budget), budget: Number(req.budget), dishes };
+}
+function shopView(shop, budget) {
+  if (!shop.length) return budget === 0 ? h("p", { class: "hint" }, "買い足しなしで作れます。") : null;
+  const total = shop.reduce((t, x) => t + (Number(x.price) || 0), 0);
+  return h("div", {}, h("h4", {}, "買い足すもの（値段は目安）"),
+    h("table", { class: "ings" }, h("tbody", {}, shop.map(x => h("tr", {},
+      h("td", {}, `${x.item}${x.amount ? `（${x.amount}）` : ""}`,
+        x.why ? h("span", { class: "why" }, "買う理由：" + x.why) : null,
+        x.without ? h("span", { class: "why" }, "買わないなら：" + x.without) : null,
+        (x.store || x.storeDays) ? h("span", { class: "why" }, "残りの保存：" + [x.store, x.storeDays].filter(Boolean).join("、")) : null),
+      h("td", { class: "amt" }, x.price ? "約" + yen(x.price) : ""))))),
+    h("div", { class: "total" }, h("span", {}, `合計 約${yen(total)}`), budget > 0 ? h("span", {}, total > budget ? `予算${yen(budget)}をこえています` : `予算${yen(budget)}以内`) : null));
+}
+function menuView(m) {
+  const parts = [h("div", {}, h("span", { class: "pill menu" }, "献立"), " ", ...m.dishes.map(d => h("span", { class: "pill", style: "margin-left:4px" }, d.category)),
+    h("h3", {}, m.title),
+    h("div", { class: "meta" }, m.totalMinutes ? h("span", {}, `全部で約${m.totalMinutes}分`) : null, h("span", {}, `${m.servings}人分`), h("span", {}, `${m.dishes.length}品`)))];
+  if (arr(m.plan).length) parts.push(h("div", {}, h("h4", {}, "段取り（作る順番）"), h("ol", { class: "steps" }, m.plan.map(s => h("li", {}, s)))));
+  const sv = shopView(arr(m.shopping), m.budget); if (sv) parts.push(sv);
+  for (const d of m.dishes) parts.push(h("div", { class: "dish" }, recipeView({ ...d, shopping: [], budget: undefined })));
+  return h("div", { class: "recipe" }, parts);
+}
 function cleanDraft(d, req) {
   if (!d || typeof d !== "object" || !d.name) throw { code: "invalid_json" };
   if (req.cat && d.category && d.category !== req.cat) throw { code: "wrong_category" };
@@ -347,7 +414,7 @@ function cleanDraft(d, req) {
     steps: arr(d.steps).map(String).filter(Boolean).slice(0, 12),
     tags: arr(d.tags).map(String).filter(Boolean).slice(0, 5),
     note: d.note ? String(d.note) : "",
-    shopping: req.budget === "0" ? [] : arr(d.shopping).filter(x => x && x.item).slice(0, 8).map(x => ({ item: String(x.item), amount: String(x.amount || ""), price: num(x.price), why: String(x.why || ""), without: String(x.without || ""), store: String(x.store || ""), storeDays: String(x.storeDays || "") })),
+    shopping: cleanShop(d.shopping, req.budget),
     budget: Number(req.budget),
   };
 }
@@ -356,28 +423,33 @@ function recipeView(r) {
     h("div", { class: "meta" }, r.minutes ? h("span", {}, `${r.minutes}分`) : null, r.servings ? h("span", {}, `${r.servings}人分`) : null, r.kcal ? h("span", {}, `1人分 約${r.kcal}kcal`) : null))];
   const ings = arr(r.ingredients);
   if (ings.length) parts.push(h("div", {}, h("h4", {}, "材料"), h("table", { class: "ings" }, h("tbody", {}, ings.map(i => h("tr", {}, h("td", {}, i.item), h("td", { class: "amt" }, i.amount)))))));
-  const shop = arr(r.shopping);
-  if (shop.length) {
-    const total = shop.reduce((t, x) => t + (Number(x.price) || 0), 0);
-    parts.push(h("div", {}, h("h4", {}, "買い足すもの（値段は目安）"),
-      h("table", { class: "ings" }, h("tbody", {}, shop.map(x => h("tr", {},
-        h("td", {}, `${x.item}${x.amount ? `（${x.amount}）` : ""}`,
-          x.why ? h("span", { class: "why" }, "買う理由：" + x.why) : null,
-          x.without ? h("span", { class: "why" }, "買わないなら：" + x.without) : null,
-          (x.store || x.storeDays) ? h("span", { class: "why" }, "残りの保存：" + [x.store, x.storeDays].filter(Boolean).join("、")) : null),
-        h("td", { class: "amt" }, x.price ? "約" + yen(x.price) : ""))))),
-      h("div", { class: "total" }, h("span", {}, `合計 約${yen(total)}`), r.budget > 0 ? h("span", {}, total > r.budget ? `予算${yen(r.budget)}をこえています` : `予算${yen(r.budget)}以内`) : null)));
-  } else if (r.budget === 0) parts.push(h("p", { class: "hint" }, "買い足しなしで作れます。"));
+  const sv = shopView(arr(r.shopping), r.budget); if (sv) parts.push(sv);
   const steps = arr(r.steps);
   if (steps.length) parts.push(h("div", {}, h("h4", {}, "作り方"), h("ol", { class: "steps" }, steps.map(s => h("li", {}, s)))));
   if (r.note) parts.push(h("p", { class: "note" }, r.note));
   return h("div", { class: "recipe" }, parts);
 }
 async function suggest() {
-  const req = { ing: $("s-ing").value.trim(), servings: Number($("s-srv").value), cat: $("s-cat").value, budget: $("s-bud").value, free: $("s-free").value.trim() };
+  const cats = CATS.filter(c => picked.includes(c));
+  const req = { ing: $("s-ing").value.trim(), servings: Number($("s-srv").value) || 1, cat: cats.length === 1 ? cats[0] : "", cats, budget: $("s-bud").value, free: $("s-free").value.trim() };
   const st = $("s-status"), out = $("s-out"), btn = $("s-go");
-  st.className = "status"; st.textContent = "考えています…（数十秒かかることがあります）"; out.textContent = ""; btn.disabled = true;
+  const isMenu = cats.length >= 2;
+  st.className = "status"; st.textContent = isMenu ? "献立を考えています…（1分ほどかかることがあります）" : "考えています…（数十秒かかることがあります）"; out.textContent = ""; btn.disabled = true;
   try {
+    if (isMenu) {
+      let m = parseJSON(await askAI(buildMenuPrompt(req), "menu"));
+      try { draft = cleanMenu(m, req); }
+      catch (e) {
+        if (!e || e.code !== "wrong_category") throw e;
+        m = parseJSON(await askAI(buildMenuPrompt(req) + `\n前回は料理の数か種類が合っていませんでした。必ず ${cats.join("・")} を1品ずつ入れてください。`, "menu-retry"));
+        draft = cleanMenu(m, req);
+      }
+      st.textContent = "";
+      out.append(menuView(draft), h("div", { class: "actions" },
+        h("button", { class: "btn", type: "button", onclick: suggest }, "別の献立"),
+        h("button", { class: "btn primary", type: "button", onclick: saveDraft }, "献立をレシピ帳に保存")));
+      return;
+    }
     let d = parseJSON(await askAI(buildPrompt(req), "suggest"));
     try { draft = cleanDraft(d, req); }
     catch (e) {
@@ -397,7 +469,7 @@ async function saveDraft() {
   if (!draft) return;
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   try {
-    await store.set("recipe:" + id, { ...draft, createdAt: Date.now() });
+    await store.set((draft.kind === "menu" ? "menu:" : "recipe:") + id, { ...draft, createdAt: Date.now() });
     toast("レシピ帳に保存しました"); draft = null; $("s-out").textContent = "";
     await loadRecipes();
   } catch { toast("保存できませんでした。もう一度試してください。"); }
@@ -405,35 +477,41 @@ async function saveDraft() {
 
 /* ===== book ===== */
 async function loadRecipes() {
-  try { recipes = await store.listRecipes(); } catch { recipes = []; }
+  try { recipes = [...await store.list("recipe:"), ...await store.list("menu:")].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); } catch { recipes = []; }
   renderBook();
 }
 function renderBook() {
   $("count").textContent = recipes.length ? `(${recipes.length})` : "";
   const list = $("list"); list.textContent = "";
-  if (!recipes.length) { list.append(h("div", { class: "empty" }, "まだレシピがありません。「提案」で考えてもらって保存すると、ここに並びます。")); return; }
-  for (const r of recipes) list.append(h("button", { class: "card", type: "button", onclick: () => openRecipe(r) },
-    h("h3", {}, r.name), h("div", { class: "meta" }, r.category ? h("span", {}, r.category) : null, r.minutes ? h("span", {}, `${r.minutes}分`) : null, r.servings ? h("span", {}, `${r.servings}人分`) : null)));
+  if (!recipes.length) { list.append(h("div", { class: "empty" }, "まだレシピも献立もありません。「提案」で考えてもらって保存すると、ここに並びます。")); return; }
+  for (const r of recipes) list.append(r.kind === "menu"
+    ? h("button", { class: "card", type: "button", onclick: () => openRecipe(r) },
+        h("div", {}, h("span", { class: "pill menu" }, "献立")), h("h3", {}, r.title),
+        h("div", { class: "meta" }, h("span", {}, arr(r.dishes).map(d => d.name).join("／")), h("span", {}, `${r.servings}人分`)))
+    : h("button", { class: "card", type: "button", onclick: () => openRecipe(r) },
+        h("h3", {}, r.name), h("div", { class: "meta" }, r.category ? h("span", {}, r.category) : null, r.minutes ? h("span", {}, `${r.minutes}分`) : null, r.servings ? h("span", {}, `${r.servings}人分`) : null)));
 }
 function openRecipe(r) {
   const body = $("dlg-body"); body.textContent = "";
   let armed = false;
   const del = h("button", { class: "btn danger", type: "button", onclick: async () => {
     if (!armed) { armed = true; del.textContent = "もう一度押すと削除"; return; }
-    try { await store.del("recipe:" + r.id); $("dlg").close(); toast("削除しました"); await loadRecipes(); } catch { toast("削除できませんでした"); }
+    try { await store.del(r.key); $("dlg").close(); toast("削除しました"); await loadRecipes(); } catch { toast("削除できませんでした"); }
   } }, "削除");
-  body.append(recipeView(r), h("div", { class: "actions" }, del, h("button", { class: "btn primary", type: "button", onclick: () => $("dlg").close() }, "閉じる")));
+  body.append(r.kind === "menu" ? menuView(r) : recipeView(r), h("div", { class: "actions" }, del, h("button", { class: "btn primary", type: "button", onclick: () => $("dlg").close() }, "閉じる")));
   $("dlg").showModal();
 }
 
 /* ===== kitchen ===== */
 async function loadKitchen() {
-  try { kitchen = (await store.get("kitchen")) || { equipment: "", pantry: "" }; } catch {}
+  try { kitchen = (await store.get("kitchen")) || { equipment: "", pantry: "", servings: 1 }; } catch {}
   $("k-eq").value = kitchen.equipment || ""; $("k-pa").value = kitchen.pantry || "";
+  $("k-srv").value = String(kitchen.servings || 1); $("s-srv").value = String(kitchen.servings || 1);
   renderKitchenHint();
 }
 async function saveKitchen() {
-  kitchen = { equipment: $("k-eq").value.trim(), pantry: $("k-pa").value.trim(), updatedAt: Date.now() };
+  kitchen = { equipment: $("k-eq").value.trim(), pantry: $("k-pa").value.trim(), servings: Number($("k-srv").value) || 1, updatedAt: Date.now() };
+  $("s-srv").value = String(kitchen.servings);
   try { await store.set("kitchen", kitchen); $("k-status").textContent = "保存しました。次の提案から使います。"; renderKitchenHint(); }
   catch { $("k-status").textContent = "保存できませんでした。もう一度試してください。"; }
 }
@@ -454,7 +532,15 @@ function showWelcome(msg) {
   $("welcome-status").textContent = msg || "";
 }
 
-$("s-cat").append(h("option", { value: "" }, "おまかせ"), ...CATS.map(c => h("option", { value: c }, c)));
+for (const id of ["s-srv", "k-srv"]) $(id).append(...[1, 2, 3, 4, 5, 6].map(n => h("option", { value: String(n) }, `${n}人分`)));
+function renderCatChips() {
+  const box = $("s-cats"); box.textContent = "";
+  for (const c of CATS) box.append(h("button", { class: "chip", type: "button", "aria-pressed": String(picked.includes(c)), onclick: () => {
+    picked = picked.includes(c) ? picked.filter(x => x !== c) : [...picked, c]; renderCatChips();
+  } }, c));
+  $("s-go").textContent = picked.length >= 2 ? `献立を提案してもらう（${picked.length}品）` : "提案してもらう";
+}
+renderCatChips();
 $("s-bud").append(...BUDGETS.map(([v, l]) => h("option", { value: v, selected: v === "300" }, l)));
 document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
 $("s-go").addEventListener("click", suggest);
