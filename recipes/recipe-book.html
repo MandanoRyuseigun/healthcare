@@ -243,6 +243,8 @@ const RC = () => `data/users/${uid}/book/recipes`;
 const RP = (id) => `${RC()}/${id}`;
 const ADV = (id) => `${RP(id)}/advice`;
 const KIT = () => `data/users/${uid}/kitchen`;
+const PREFS = () => `data/users/${uid}/prefs`;
+const ACCESS_MSG = "あなた専用のレシピ帳を作れません。組織の外の人がリンクやメール招待で開くと「閲覧のみ」になり、保存とAIが使えません。持ち主に、公開リンクを止めたうえで、メールで「編集者」として招待してもらってください。";
 let openId = null, mode = null, deleteArmed = false, aiCtl = null, aiDraft = null;
 
 const $ = (id) => document.getElementById(id);
@@ -508,7 +510,7 @@ function openAI() {
   const body = $("dbody"); body.textContent = "";
   if (!sample) {
     body.append(h("div", { class: "empty" }, h("strong", {}, "この画面からの提案は使えません"),
-      "claude.aiにサインインしてこのページを開くと使えます。チャットでClaudeに「レシピを提案して」と頼めば、このレシピ集に追加してもらえます。"));
+      "この開き方では、ページから Claude を呼べません。サインインしていない、またはリンクで開いた組織外の人などが当てはまります。持ち主に、メールで「編集者」として招待してもらってください。チャットで Claude に「レシピを提案して」と頼むこともできます。"));
     const f = $("dfoot"); f.textContent = ""; f.append(h("button", { class: "btn primary", type: "button", onclick: closeLayer }, "閉じる"));
     openLayer("提案してもらう"); return;
   }
@@ -528,6 +530,7 @@ function openAI() {
   const out = h("div", { id: "ai-out" });
   body.append(
     kitchenBox(),
+    field("AIのモード", tierSelect("ai-tier"), "「節約」は速く、Claude の利用上限に達しにくい。「しっかり」は考えが深いぶん、上限を早く使います。"),
     h("div", { class: "field" }, h("label", { for: "ai-ing" }, "家にある食材・使いたい食材"), ing),
     h("div", { class: "row" }, h("div", { class: "field" }, h("label", { for: "ai-srv" }, "人数"), srv), h("div", { class: "field", style: "grid-column: span 2" }, h("label", { for: "ai-cat" }, "カテゴリ"), cat)),
     field("足りない食材の買い足し予算", bud, "書いた食材と「うちの調理環境」の常備品にないものを、予算の中で買うかどうかも考えます。"),
@@ -585,7 +588,7 @@ function cleanDraft(d, req) {
 const AI_ERR = {
   not_granted: "このページからClaudeを使うことが許可されていません。チャットでClaudeに頼むこともできます。",
   sampling_disabled: "このアカウントではこの画面から提案を使えません。",
-  rate_limited: "短い時間に頼みすぎました。少し待ってから試してください。",
+  rate_limited: "Claude の利用上限に達したか、短い時間に頼みすぎました。少し待つか、AIのモードを「節約」にして試してください。",
   session_expired: "サインインし直してから試してください。",
   invalid_json: "提案をうまく読み取れませんでした。もう一度試してください。",
   wrong_category: "選んだカテゴリに合う料理が出てきませんでした。もう一度試すか、食材や条件を変えてください。",
@@ -599,11 +602,11 @@ async function suggest(req, again) {
   out.textContent = ""; if (btn) btn.disabled = true;
   try {
     try {
-      const d = await sample.json(buildPrompt(req), { signal: aiCtl.signal, cache: again ? false : undefined });
+      const d = await sample.json(buildPrompt(req), aiOpts({ signal: aiCtl.signal, cache: again ? false : undefined }));
       aiDraft = cleanDraft(d, req);
     } catch (e1) {
       if (!e1 || e1.code !== "wrong_category") throw e1;
-      const d2 = await sample.json(buildPrompt(req) + `\n\n前回はカテゴリに合わない料理でした。今回は必ず「${req.cat}」（${CAT_DEF[req.cat]}）に当てはまる料理にしてください。`, { signal: aiCtl.signal, cache: false });
+      const d2 = await sample.json(buildPrompt(req) + `\n\n前回はカテゴリに合わない料理でした。今回は必ず「${req.cat}」（${CAT_DEF[req.cat]}）に当てはまる料理にしてください。`, aiOpts({ signal: aiCtl.signal, cache: false }));
       aiDraft = cleanDraft(d2, req);
     }
     status.textContent = "";
@@ -627,6 +630,26 @@ async function suggest(req, again) {
 
 /* ---------- kitchen setup ---------- */
 let kitchen = { equipment: "", pantry: "" };
+
+/* ---------- AI mode (model tier) ---------- */
+const TIERS = [["quick", "節約（速い・上限に達しにくい）"], ["default", "ふつう"], ["complex", "しっかり（上限を早く使う）"]];
+let aiTier = (() => { try { return localStorage.getItem("recipe-ai-tier") || "quick"; } catch { return "quick"; } })();
+function applyTier(v) {
+  if (!TIERS.some(([k]) => k === v)) return;
+  aiTier = v;
+  try { localStorage.setItem("recipe-ai-tier", v); } catch {}
+  document.querySelectorAll("select[data-tier]").forEach((el) => { el.value = v; });
+}
+function setAiTier(v) {
+  applyTier(v);
+  if (db && uid && canWrite) db.doc(PREFS()).set({ aiTier: v, updatedAt: Date.now() }).catch(() => {});
+}
+function tierSelect(id) {
+  const el = h("select", { id, "data-tier": "1" }, TIERS.map(([v, l]) => h("option", { value: v, selected: v === aiTier }, l)));
+  el.addEventListener("change", () => setAiTier(el.value));
+  return el;
+}
+const aiOpts = (o) => ({ ...o, modelTier: aiTier });
 function kitchenNow() {
   const eq = $("kit-eq"), pa = $("kit-pa");
   return { equipment: (eq ? eq.value : kitchen.equipment).trim(), pantry: (pa ? pa.value : kitchen.pantry).trim() };
@@ -699,8 +722,9 @@ function adviceSection(saved) {
       ? h("div", { class: "adv-ask" }, q,
           h("div", { class: "kit-row" },
             h("button", { class: "btn primary", type: "button", id: "adv-go", onclick: () => askAdvice(saved, q) }, "相談する"),
+            h("label", { class: "hint", for: "adv-tier" }, "AIのモード"), tierSelect("adv-tier"),
             h("span", { class: "hint" }, kitchenText() ? "うちの調理環境もふまえて答えます" : "調理環境は「提案してもらう」の画面で登録できます")))
-      : h("p", { class: "hint", style: "margin:0" }, "この画面からは相談できません。claude.aiにサインインして開くか、チャットでClaudeに聞いてください。"),
+      : h("p", { class: "hint", style: "margin:0" }, "この開き方では、ページから Claude を呼べません。持ち主にメールで「編集者」として招待してもらうか、チャットで Claude に聞いてください。"),
     h("p", { class: "ai-status", id: "adv-status" }),
     saved ? null : h("p", { class: "hint", style: "margin:0" }, "この提案への相談は、レシピ集に追加すると消えます。残したい内容は「レシピに反映」してから追加してください。"));
 }
@@ -751,7 +775,7 @@ async function askAdvice(saved, qEl) {
   const aEl = pendingNode.querySelector(".adv-a");
   qEl.value = "";
   try {
-    const res = await sample(advicePrompt(r, question), { signal: adviceCtl.signal, cache: false, onText: ({ text }) => { if (text) aEl.textContent = text; } });
+    const res = await sample(advicePrompt(r, question), aiOpts({ signal: adviceCtl.signal, cache: false, onText: ({ text }) => { if (text) aEl.textContent = text; } }));
     const answer = String(res && res.text || "").trim();
     if (!answer) throw { code: "empty" };
     const item = { q: question, a: answer, createdAt: Date.now() };
@@ -792,7 +816,7 @@ async function applyAdvice(a, btn) {
       `{"name":"料理名","category":"${r.category || "主菜"}","minutes":調理時間の分(数値),"servings":${r.servings || 2},"kcal":1人分のおおよそのkcal(数値),"ingredients":[{"item":"材料名","amount":"分量"}],"steps":["手順1","手順2"],"tags":["短いタグ"],"note":"コツと、元のレシピから変えた点をひとこと","shopping":[{"item":"買い足す食材","amount":"買う量（1パック、1本など）","price":おおよその値段の円(数値),"why":"買う理由をひとこと","without":"買わずに作るならどうするか（代用・省略）","store":"使い切れずに残った分の保存方法（冷蔵か冷凍か、包み方、下処理など）","storeDays":"保存期間の目安（冷蔵2〜3日、冷凍1か月など）"}]}`,
       "ingredients には買い足すものも含めてください。買い足すものがなければ shopping は空の配列にしてください。",
     ].join("\n");
-    const d = await sample.json(prompt, { cache: false });
+    const d = await sample.json(prompt, aiOpts({ cache: false }));
     const rev = cleanDraft(d, { cat: r.category || "", servings: r.servings || 2, budget: r.budget === "free" ? "free" : (Number.isFinite(r.budget) ? String(r.budget) : "") });
     if (!rev.tags.length) rev.tags = arr(r.tags);
     if (!saved) {
@@ -836,7 +860,7 @@ async function fillStorage(r, btn) {
       "次の形のJSON配列だけを返してください。食材ごとに1つ、上と同じ順番で。",
       '[{"item":"食材名","store":"保存方法（冷蔵か冷凍か、包み方、下処理など）","storeDays":"保存期間の目安（冷蔵2〜3日、冷凍1か月など）"}]',
     ].join("\n");
-    const res = arr(await sample.json(prompt, { cache: false }));
+    const res = arr(await sample.json(prompt, aiOpts({ cache: false })));
     const next = shop.map((x, i) => {
       const m = res.find(y => y && y.item === x.item) || res[i] || {};
       return { ...x, store: x.store || String(m.store || ""), storeDays: x.storeDays || String(m.storeDays || "") };
@@ -863,7 +887,7 @@ async function saveRecipe(data, existing) {
     }
   } catch (e) {
     toast(e && e.code === "quota_exceeded" ? "保存できる上限に達しています。不要なレシピを削除してください。" : "保存できませんでした。もう一度試してください。");
-    if (e && e.code === "invalid_argument") { canWrite = false; renderGrid(); }
+    if (e && e.code === "invalid_argument") { canWrite = false; setReadOnly(ACCESS_MSG); renderGrid(); }
   }
 }
 async function toggleFav(r) {
@@ -893,9 +917,11 @@ function setReadOnly(msg) {
   const [d, u, s] = await Promise.all([claude.use("db"), claude.use("user"), claude.use("sample")]);
   db = d; sample = s; userApi = u;
   if (db && u) { try { uid = await u.id(); } catch {} }
-  if (!db || !uid) { ready = true; setReadOnly("claude.aiにサインインすると、自分のレシピ帳を表示・保存できます。"); renderTabs(); renderGrid(); return; }
+  if (!db) { ready = true; setReadOnly("この表示ではレシピ帳を読み込めません。claude.ai にサインインして開いてください。"); renderTabs(); renderGrid(); return; }
+  if (!uid) { ready = true; setReadOnly(ACCESS_MSG); renderTabs(); renderGrid(); return; }
   try { isOwner = !!(await u.isOwner()); } catch {}
   canWrite = true;
+  db.doc(PREFS()).onSnapshot((pr) => { const v = pr.exists ? (pr.data() || {}) : {}; if (v.aiTier) applyTier(v.aiTier); }, () => {});
   db.doc(KIT()).onSnapshot((k) => {
     const v = k.exists ? (k.data() || {}) : {};
     kitchen = { equipment: String(v.equipment || ""), pantry: String(v.pantry || "") };
