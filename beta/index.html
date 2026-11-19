@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>うちのレシピ帳 β</title>
+<meta name="theme-color" content="#2e7a4c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<style>
+:root {
+  --bg: #f5f7f2; --surface: #ffffff; --sunk: #ebefe6; --ink: #1d2620; --muted: #5d6a60; --line: #d6ddd0;
+  --herb: #2e7a4c; --herb-ink: #ffffff; --herb-soft: #dcebdf; --kabocha: #b4600f; --kabocha-soft: #f6e4d2; --danger: #b3342b;
+  --display: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+  --body: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #141a16; --surface: #1c241f; --sunk: #232d27; --ink: #e8eee8; --muted: #a2b0a5; --line: #314037;
+    --herb: #6cc391; --herb-ink: #0f1a13; --herb-soft: #23392b; --kabocha: #f0a35e; --kabocha-soft: #3a2a1b; --danger: #f08a80; color-scheme: dark; }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.7;
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--herb); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.wrap { max-width: 720px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+header { position: sticky; top: 0; z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+header .wrap { display: flex; align-items: center; gap: 10px; padding-block: 12px; }
+header h1 { font-family: var(--display); font-size: 1.2rem; margin: 0; margin-right: auto; white-space: nowrap; }
+header h1 small { font-size: .7rem; color: var(--kabocha); background: var(--kabocha-soft); border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; }
+.who { font-size: .78rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 8em; }
+header .btn { padding: 5px 12px; font-size: .8rem; white-space: nowrap; }
+
+nav.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; margin-top: 12px; }
+nav.tabs button { border: 0; background: none; padding: 8px 14px; color: var(--muted); font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+nav.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--herb); }
+
+main { padding-block: 16px 64px; display: grid; gap: 16px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 14px; }
+.panel h2 { font-family: var(--display); font-size: 1.15rem; margin: 0; }
+.field { display: grid; gap: 4px; }
+.field label { font-size: .82rem; font-weight: 500; color: var(--muted); }
+.field input, .field select, .field textarea { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 9px 11px; width: 100%; min-width: 0; }
+.field textarea { resize: vertical; line-height: 1.6; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.hint { font-size: .78rem; color: var(--muted); margin: 0; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 9px 18px; font-weight: 500; }
+.btn.primary { background: var(--herb); border-color: var(--herb); color: var(--herb-ink); }
+.btn.danger { color: var(--danger); border-color: var(--danger); }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.status { font-size: .9rem; color: var(--muted); margin: 0; }
+.status.err { color: var(--danger); }
+.pill { display: inline-block; font-size: .75rem; color: var(--herb); background: var(--herb-soft); border-radius: 999px; padding: 1px 10px; }
+
+.welcome { display: grid; gap: 12px; }
+.welcome ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.welcome .box { background: var(--sunk); border-radius: 8px; padding: 12px 14px; font-size: .9rem; }
+
+.list { display: grid; gap: 10px; }
+.card { all: unset; box-sizing: border-box; cursor: pointer; display: grid; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.card:hover { border-color: var(--herb); }
+.card:focus-visible { outline: 2px solid var(--herb); outline-offset: 2px; }
+.card h3 { font-family: var(--display); font-size: 1.05rem; margin: 0; }
+.meta { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.empty { border: 1.5px dashed var(--line); border-radius: 12px; padding: 24px 16px; text-align: center; color: var(--muted); }
+
+.recipe { display: grid; gap: 14px; }
+.recipe h3 { font-family: var(--display); font-size: 1.35rem; margin: 0; line-height: 1.4; }
+.recipe h4 { font-family: var(--display); font-size: 1rem; margin: 0 0 6px; }
+table.ings { width: 100%; border-collapse: collapse; font-size: .93rem; }
+table.ings td { padding: 6px 0; border-bottom: 1px dotted var(--line); vertical-align: top; }
+table.ings td.amt { text-align: right; color: var(--muted); white-space: nowrap; padding-left: 12px; }
+table.ings .why { display: block; font-size: .8rem; color: var(--muted); }
+ol.steps { margin: 0; padding-left: 1.4em; display: grid; gap: 8px; }
+.note { background: var(--sunk); border-radius: 8px; padding: 10px 14px; font-size: .9rem; white-space: pre-wrap; margin: 0; }
+.total { display: flex; justify-content: space-between; font-size: .9rem; padding-top: 6px; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat { background: var(--sunk); border-radius: 10px; padding: 12px; text-align: center; }
+.stat b { display: block; font-family: var(--display); font-size: 1.6rem; color: var(--herb); font-variant-numeric: tabular-nums; }
+.stat span { font-size: .78rem; color: var(--muted); }
+table.log { width: 100%; border-collapse: collapse; font-size: .82rem; font-variant-numeric: tabular-nums; }
+table.log th, table.log td { padding: 5px 4px; border-bottom: 1px solid var(--line); text-align: right; }
+table.log th:first-child, table.log td:first-child { text-align: left; }
+.scroll { overflow-x: auto; }
+
+dialog { border: 0; border-radius: 14px; padding: 0; width: min(640px, calc(100% - 24px)); max-height: calc(100% - 48px); background: var(--surface); color: var(--ink); }
+dialog::backdrop { background: rgba(10, 16, 12, .45); }
+.dlg { display: grid; gap: 14px; padding: 18px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 8px 18px; border-radius: 999px; font-size: .88rem; z-index: 30; }
+@media (max-width: 420px) { .stat b { font-size: 1.3rem; } .stat span { font-size: .72rem; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>うちのレシピ帳<small>β</small></h1>
+    <span class="who" id="who"></span>
+    <button class="btn" id="btn-out" type="button" hidden>ログアウト</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <section id="welcome" class="panel welcome" hidden>
+    <h2>はじめに</h2>
+    <p style="margin:0">一人暮らしの台所に合わせて、AIがレシピを提案するアプリの試験版です。</p>
+    <ol>
+      <li>「Puter でログイン」を押します。Puter は、このアプリのAIと保存を動かす海外のサービスです（画面が英語のことがあります）。</li>
+      <li>はじめての人は Puter のアカウントを作ります（無料）。</li>
+      <li>ログインできたら、「提案」から食材を入れて試してください。</li>
+    </ol>
+    <div class="box">
+      <b>お金と記録について</b><br>
+      AIの利用料は、あなたの Puter アカウントの毎月の無料枠から使われます。このアプリは試験中のため、AIは「節約モード」に固定しています。<br>
+      レシピと調理環境は、あなたの Puter アカウントの中に保存され、運営者には見えません。
+    </div>
+    <div class="actions"><button class="btn primary" id="btn-in" type="button">Puter でログイン</button></div>
+    <p class="status" id="welcome-status"></p>
+  </section>
+
+  <div id="app" hidden>
+    <nav class="tabs" role="tablist" aria-label="画面">
+      <button type="button" role="tab" data-tab="suggest" aria-selected="true">提案</button>
+      <button type="button" role="tab" data-tab="book" aria-selected="false">レシピ帳 <span id="count"></span></button>
+      <button type="button" role="tab" data-tab="kitchen" aria-selected="false">調理環境</button>
+      <button type="button" role="tab" data-tab="usage" aria-selected="false">使用量</button>
+    </nav>
+    <main>
+      <section data-view="suggest" class="panel">
+        <h2>提案してもらう <span class="pill">節約モード</span></h2>
+        <div class="field"><label for="s-ing">家にある食材・使いたい食材</label><input id="s-ing" placeholder="例：鶏むね肉、キャベツ、卵"></div>
+        <div class="row2">
+          <div class="field"><label for="s-srv">人数</label><select id="s-srv"><option value="1" selected>1人分</option><option value="2">2人分</option></select></div>
+          <div class="field"><label for="s-cat">カテゴリ</label><select id="s-cat"></select></div>
+        </div>
+        <div class="field"><label for="s-bud">足りない食材の買い足し予算</label><select id="s-bud"></select></div>
+        <div class="field"><label for="s-free">ほかに伝えたいこと</label><textarea id="s-free" rows="2" placeholder="例：10分で作りたい、明日の弁当にも回したい"></textarea></div>
+        <p class="hint" id="s-kit"></p>
+        <div class="actions"><button class="btn primary" id="s-go" type="button">提案してもらう</button></div>
+        <p class="status" id="s-status" role="status"></p>
+        <div id="s-out"></div>
+      </section>
+
+      <section data-view="book" hidden>
+        <div class="list" id="list"></div>
+      </section>
+
+      <section data-view="kitchen" class="panel" hidden>
+        <h2>うちの調理環境</h2>
+        <div class="field"><label for="k-eq">調理器具・設備</label><textarea id="k-eq" rows="3" placeholder="例：IHコンロ1口、電子レンジ、炊飯器、フライパン、魚焼きグリルなし"></textarea></div>
+        <div class="field"><label for="k-pa">いつも家にある食材・調味料</label><textarea id="k-pa" rows="2" placeholder="例：しょうゆ、みりん、味噌、めんつゆ、チューブ生姜、ごま油、卵"></textarea></div>
+        <p class="hint">提案のとき、ここにある器具だけで作れる料理にし、常備品を活かします。</p>
+        <div class="actions"><button class="btn primary" id="k-save" type="button">保存</button></div>
+        <p class="status" id="k-status" role="status"></p>
+      </section>
+
+      <section data-view="usage" class="panel" hidden>
+        <h2>今月の使用量</h2>
+        <p class="hint">無料枠でどのくらい使えるかを見積もるための記録です。この端末の記録ではなく、あなたの Puter アカウントに保存されます。</p>
+        <div class="stats">
+          <div class="stat"><b id="u-calls">0</b><span>AIを使った回数</span></div>
+          <div class="stat"><b id="u-in">0</b><span>送った文字数（1回平均）</span></div>
+          <div class="stat"><b id="u-out">0</b><span>受け取った文字数（1回平均）</span></div>
+        </div>
+        <div id="u-puter"></div>
+        <div class="scroll"><table class="log"><thead><tr><th>日時</th><th>種類</th><th>送った字数</th><th>受け取った字数</th><th>秒</th></tr></thead><tbody id="u-log"></tbody></table></div>
+        <p class="hint">Puter の画面（puter.com の設定 › 使用量）でも、無料枠の残りを確かめられます。回数と見比べると、1回あたりの消費が分かります。</p>
+      </section>
+    </main>
+  </div>
+</div>
+
+<dialog id="dlg"><div class="dlg" id="dlg-body"></div></dialog>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://js.puter.com/v2/"></script>
+<script>
+"use strict";
+/* ===== settings ===== */
+const AI_MODEL = "claude-haiku-5-5";   // 節約モード固定（試験版）。Puter が受け付けないときは Puter の標準モデルで再試行する
+const CATS = ["主菜", "副菜", "汁物", "ご飯・麺", "作り置き", "おやつ"];
+const CAT_DEF = {
+  "主菜": "肉・魚・卵・大豆製品などが中心の、ご飯と一緒に食べるメインのおかず。ご飯もの・丼・麺類・パンは含めない",
+  "副菜": "野菜・きのこ・海藻・いもなどが中心の小さなおかず",
+  "汁物": "味噌汁・スープなどの汁もの。麺類は含めない",
+  "ご飯・麺": "ご飯もの・丼・おにぎり・麺類・パン",
+  "作り置き": "冷蔵や冷凍で数日もつ常備菜",
+  "おやつ": "間食やデザート",
+};
+const BUDGETS = [["0", "買い足さない"], ["300", "300円まで"], ["500", "500円まで"], ["1000", "1,000円まで"]];
+
+/* ===== small helpers ===== */
+const $ = (id) => document.getElementById(id);
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) el.append(c.nodeType ? c : String(c));
+  return el;
+}
+const arr = (v) => Array.isArray(v) ? v : [];
+const num = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.round(n) : null; };
+const yen = (n) => `${Math.round(n).toLocaleString("ja-JP")}円`;
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 2400); }
+const monthKey = () => { const d = new Date(); return `usage:${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
+
+/* ===== storage (Puter key-value, per user and app) ===== */
+const store = {
+  async get(key) { const v = await puter.kv.get(key); if (v == null) return null; try { return typeof v === "string" ? JSON.parse(v) : v; } catch { return v; } },
+  async set(key, value) { await puter.kv.set(key, JSON.stringify(value)); },
+  async del(key) { await puter.kv.del(key); },
+  async listRecipes() {
+    const res = await puter.kv.list("recipe:*", true);
+    const out = [];
+    for (const item of arr(res)) {
+      if (typeof item === "string") { const v = await store.get(item); if (v) out.push({ ...v, id: item.slice(7) }); }
+      else if (item && item.key) { let v = item.value; try { if (typeof v === "string") v = JSON.parse(v); } catch {} if (v) out.push({ ...v, id: String(item.key).slice(7) }); }
+    }
+    return out.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  },
+};
+
+/* ===== AI (one place, so the provider can be swapped later) ===== */
+function textOf(res) {
+  if (res == null) return "";
+  if (typeof res === "string") return res;
+  const c = res.message && res.message.content;
+  if (typeof c === "string") return c;
+  if (Array.isArray(c)) return c.map(p => (p && (p.text || "")) || "").join("");
+  if (typeof res.text === "string") return res.text;
+  return String(res);
+}
+async function askAI(prompt, kind) {
+  const started = Date.now();
+  let res, model = AI_MODEL;
+  try { res = await puter.ai.chat(prompt, { model: AI_MODEL }); }
+  catch (e) {
+    const msg = String((e && (e.message || e.error || e)) || "");
+    if (/model/i.test(msg) && !/limit|quota|insufficient|funds|credit/i.test(msg)) { model = "default"; res = await puter.ai.chat(prompt); }
+    else throw e;
+  }
+  const text = textOf(res);
+  await logUsage({ kind, model, inChars: prompt.length, outChars: text.length, sec: Math.round((Date.now() - started) / 100) / 10 });
+  return text;
+}
+function parseJSON(text) {
+  const s = text.indexOf("{"), e = text.lastIndexOf("}");
+  if (s < 0 || e <= s) throw { code: "invalid_json" };
+  try { return JSON.parse(text.slice(s, e + 1)); } catch { throw { code: "invalid_json" }; }
+}
+function aiErrorText(e) {
+  if (e && e.code === "invalid_json") return "提案をうまく読み取れませんでした。もう一度試してください。";
+  if (e && e.code === "wrong_category") return "選んだカテゴリに合う料理が出てきませんでした。もう一度試してください。";
+  const msg = String((e && (e.message || e.error || (e.error && e.error.message))) || e || "");
+  if (/limit|quota|insufficient|funds|credit|allowance/i.test(msg)) return "Puter の今月の無料枠を使い切った可能性があります。「使用量」の回数をメモして、運営者に知らせてください。";
+  return "提案を受け取れませんでした。少し待ってからもう一度試してください。" + (msg ? `（${msg.slice(0, 120)}）` : "");
+}
+
+/* ===== usage log (counts and sizes only, no content) ===== */
+let usage = { calls: 0, inChars: 0, outChars: 0, log: [] };
+async function loadUsage() { usage = (await store.get(monthKey())) || { calls: 0, inChars: 0, outChars: 0, log: [] }; renderUsage(); }
+async function logUsage(x) {
+  usage.calls += 1; usage.inChars += x.inChars; usage.outChars += x.outChars;
+  usage.log = [{ at: Date.now(), ...x }, ...arr(usage.log)].slice(0, 200);
+  try { await store.set(monthKey(), usage); } catch {}
+  renderUsage();
+}
+function renderUsage() {
+  $("u-calls").textContent = usage.calls;
+  $("u-in").textContent = usage.calls ? Math.round(usage.inChars / usage.calls).toLocaleString() : 0;
+  $("u-out").textContent = usage.calls ? Math.round(usage.outChars / usage.calls).toLocaleString() : 0;
+  const tb = $("u-log"); tb.textContent = "";
+  const kindName = { suggest: "提案", retry: "提案（再試行）" };
+  for (const r of arr(usage.log).slice(0, 30)) {
+    const d = new Date(r.at);
+    tb.append(h("tr", {}, h("td", {}, `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`),
+      h("td", {}, (kindName[r.kind] || r.kind) + (r.model === "default" ? "＊" : "")), h("td", {}, r.inChars.toLocaleString()), h("td", {}, r.outChars.toLocaleString()), h("td", {}, r.sec)));
+  }
+}
+async function showPuterUsage() {
+  const box = $("u-puter"); box.textContent = "";
+  try {
+    if (puter.auth && typeof puter.auth.getMonthlyUsage === "function") {
+      const u = await puter.auth.getMonthlyUsage();
+      box.append(h("p", { class: "hint" }, "Puter が返した今月の使用状況（そのまま表示）："), h("pre", { class: "note", style: "overflow-x:auto" }, JSON.stringify(u, null, 2).slice(0, 1500)));
+    }
+  } catch { /* not available: the Puter site shows it */ }
+}
+
+/* ===== state ===== */
+let kitchen = { equipment: "", pantry: "" };
+let recipes = [];
+let draft = null;
+
+function kitchenText() {
+  const l = [];
+  if (kitchen.equipment) l.push(`うちの調理環境: ${kitchen.equipment}`);
+  if (kitchen.pantry) l.push(`いつも家にある食材・調味料: ${kitchen.pantry}`);
+  return l.join("\n");
+}
+function renderKitchenHint() {
+  $("s-kit").textContent = kitchenText() ? "登録した調理環境と常備品をふまえて考えます。" : "「調理環境」に器具と常備品を登録すると、それに合わせて考えます。";
+}
+
+/* ===== suggestion ===== */
+function budgetLine(b) {
+  if (b === "0") return "買い足しはしません。使いたい食材と家にある食材・調味料だけで作れる料理にし、shopping は空の配列にしてください。";
+  return `足りない食材は合計${b}円以内なら買い足してかまいません。買わなくてもおいしく作れるならそちらを優先してください。買い足すものは shopping に、日本のスーパーでのおおよその値段（円）、買う理由、買わずに作る方法、残った分の保存方法と保存期間の目安と一緒に書いてください。`;
+}
+function buildPrompt(req) {
+  const have = recipes.slice(0, 40).map(r => r.name).filter(Boolean);
+  return [
+    "一人暮らしの料理初心者向けに、家庭料理のレシピを1品、日本語で提案してください。手順は初心者にも分かる言葉で、材料はスーパーで手に入るものにしてください。",
+    req.ing ? `使いたい食材: ${req.ing}` : "使いたい食材: 特になし",
+    `人数: ${req.servings}人分`,
+    req.cat ? `カテゴリ: ${req.cat}（${CAT_DEF[req.cat]}）。必ずこのカテゴリの料理にしてください。` : "",
+    req.free ? `補足: ${req.free}` : "",
+    budgetLine(req.budget),
+    kitchenText() ? `${kitchenText()}\nここに書かれた器具だけで作れる料理にし、家にある食材・調味料をなるべく活かしてください。` : "",
+    have.length ? `すでに保存してある料理（違う料理にしてください）: ${have.join(" / ")}` : "",
+    "鶏肉・豚肉・ひき肉・魚・卵を使うときは、中まで火を通す目安を手順に書いてください。健康や体への効果はうたわないでください。",
+    "",
+    "次の形のJSONオブジェクトだけを返してください。説明文は不要です。",
+    `{"name":"料理名","category":"${CATS.join("|")}のどれか","minutes":調理時間の分,"servings":${req.servings},"kcal":1人分のおおよそのkcal,"ingredients":[{"item":"材料名","amount":"分量"}],"steps":["手順"],"tags":["短いタグ"],"note":"コツをひとこと","shopping":[{"item":"買い足す食材","amount":"買う量","price":円,"why":"買う理由","without":"買わずに作る方法","store":"残りの保存方法","storeDays":"保存期間の目安"}]}`,
+    "手順は3〜7個にしてください。",
+  ].filter(Boolean).join("\n");
+}
+function cleanDraft(d, req) {
+  if (!d || typeof d !== "object" || !d.name) throw { code: "invalid_json" };
+  if (req.cat && d.category && d.category !== req.cat) throw { code: "wrong_category" };
+  return {
+    name: String(d.name).slice(0, 80),
+    category: req.cat || (CATS.includes(d.category) ? d.category : ""),
+    minutes: num(d.minutes), servings: num(d.servings) || req.servings, kcal: num(d.kcal),
+    ingredients: arr(d.ingredients).filter(i => i && i.item).slice(0, 30).map(i => ({ item: String(i.item), amount: String(i.amount || "") })),
+    steps: arr(d.steps).map(String).filter(Boolean).slice(0, 12),
+    tags: arr(d.tags).map(String).filter(Boolean).slice(0, 5),
+    note: d.note ? String(d.note) : "",
+    shopping: req.budget === "0" ? [] : arr(d.shopping).filter(x => x && x.item).slice(0, 8).map(x => ({ item: String(x.item), amount: String(x.amount || ""), price: num(x.price), why: String(x.why || ""), without: String(x.without || ""), store: String(x.store || ""), storeDays: String(x.storeDays || "") })),
+    budget: Number(req.budget),
+  };
+}
+function recipeView(r) {
+  const parts = [h("div", {}, r.category ? h("span", { class: "pill" }, r.category) : null, h("h3", {}, r.name),
+    h("div", { class: "meta" }, r.minutes ? h("span", {}, `${r.minutes}分`) : null, r.servings ? h("span", {}, `${r.servings}人分`) : null, r.kcal ? h("span", {}, `1人分 約${r.kcal}kcal`) : null))];
+  const ings = arr(r.ingredients);
+  if (ings.length) parts.push(h("div", {}, h("h4", {}, "材料"), h("table", { class: "ings" }, h("tbody", {}, ings.map(i => h("tr", {}, h("td", {}, i.item), h("td", { class: "amt" }, i.amount)))))));
+  const shop = arr(r.shopping);
+  if (shop.length) {
+    const total = shop.reduce((t, x) => t + (Number(x.price) || 0), 0);
+    parts.push(h("div", {}, h("h4", {}, "買い足すもの（値段は目安）"),
+      h("table", { class: "ings" }, h("tbody", {}, shop.map(x => h("tr", {},
+        h("td", {}, `${x.item}${x.amount ? `（${x.amount}）` : ""}`,
+          x.why ? h("span", { class: "why" }, "買う理由：" + x.why) : null,
+          x.without ? h("span", { class: "why" }, "買わないなら：" + x.without) : null,
+          (x.store || x.storeDays) ? h("span", { class: "why" }, "残りの保存：" + [x.store, x.storeDays].filter(Boolean).join("、")) : null),
+        h("td", { class: "amt" }, x.price ? "約" + yen(x.price) : ""))))),
+      h("div", { class: "total" }, h("span", {}, `合計 約${yen(total)}`), r.budget > 0 ? h("span", {}, total > r.budget ? `予算${yen(r.budget)}をこえています` : `予算${yen(r.budget)}以内`) : null)));
+  } else if (r.budget === 0) parts.push(h("p", { class: "hint" }, "買い足しなしで作れます。"));
+  const steps = arr(r.steps);
+  if (steps.length) parts.push(h("div", {}, h("h4", {}, "作り方"), h("ol", { class: "steps" }, steps.map(s => h("li", {}, s)))));
+  if (r.note) parts.push(h("p", { class: "note" }, r.note));
+  return h("div", { class: "recipe" }, parts);
+}
+async function suggest() {
+  const req = { ing: $("s-ing").value.trim(), servings: Number($("s-srv").value), cat: $("s-cat").value, budget: $("s-bud").value, free: $("s-free").value.trim() };
+  const st = $("s-status"), out = $("s-out"), btn = $("s-go");
+  st.className = "status"; st.textContent = "考えています…（数十秒かかることがあります）"; out.textContent = ""; btn.disabled = true;
+  try {
+    let d = parseJSON(await askAI(buildPrompt(req), "suggest"));
+    try { draft = cleanDraft(d, req); }
+    catch (e) {
+      if (!e || e.code !== "wrong_category") throw e;
+      d = parseJSON(await askAI(buildPrompt(req) + `\n前回はカテゴリに合わない料理でした。必ず「${req.cat}」の料理にしてください。`, "retry"));
+      draft = cleanDraft(d, req);
+    }
+    st.textContent = "";
+    out.append(recipeView(draft), h("div", { class: "actions" },
+      h("button", { class: "btn", type: "button", onclick: suggest }, "別の案"),
+      h("button", { class: "btn primary", type: "button", onclick: saveDraft }, "レシピ帳に保存")));
+  } catch (e) {
+    st.className = "status err"; st.textContent = aiErrorText(e);
+  } finally { btn.disabled = false; }
+}
+async function saveDraft() {
+  if (!draft) return;
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  try {
+    await store.set("recipe:" + id, { ...draft, createdAt: Date.now() });
+    toast("レシピ帳に保存しました"); draft = null; $("s-out").textContent = "";
+    await loadRecipes();
+  } catch { toast("保存できませんでした。もう一度試してください。"); }
+}
+
+/* ===== book ===== */
+async function loadRecipes() {
+  try { recipes = await store.listRecipes(); } catch { recipes = []; }
+  renderBook();
+}
+function renderBook() {
+  $("count").textContent = recipes.length ? `(${recipes.length})` : "";
+  const list = $("list"); list.textContent = "";
+  if (!recipes.length) { list.append(h("div", { class: "empty" }, "まだレシピがありません。「提案」で考えてもらって保存すると、ここに並びます。")); return; }
+  for (const r of recipes) list.append(h("button", { class: "card", type: "button", onclick: () => openRecipe(r) },
+    h("h3", {}, r.name), h("div", { class: "meta" }, r.category ? h("span", {}, r.category) : null, r.minutes ? h("span", {}, `${r.minutes}分`) : null, r.servings ? h("span", {}, `${r.servings}人分`) : null)));
+}
+function openRecipe(r) {
+  const body = $("dlg-body"); body.textContent = "";
+  let armed = false;
+  const del = h("button", { class: "btn danger", type: "button", onclick: async () => {
+    if (!armed) { armed = true; del.textContent = "もう一度押すと削除"; return; }
+    try { await store.del("recipe:" + r.id); $("dlg").close(); toast("削除しました"); await loadRecipes(); } catch { toast("削除できませんでした"); }
+  } }, "削除");
+  body.append(recipeView(r), h("div", { class: "actions" }, del, h("button", { class: "btn primary", type: "button", onclick: () => $("dlg").close() }, "閉じる")));
+  $("dlg").showModal();
+}
+
+/* ===== kitchen ===== */
+async function loadKitchen() {
+  try { kitchen = (await store.get("kitchen")) || { equipment: "", pantry: "" }; } catch {}
+  $("k-eq").value = kitchen.equipment || ""; $("k-pa").value = kitchen.pantry || "";
+  renderKitchenHint();
+}
+async function saveKitchen() {
+  kitchen = { equipment: $("k-eq").value.trim(), pantry: $("k-pa").value.trim(), updatedAt: Date.now() };
+  try { await store.set("kitchen", kitchen); $("k-status").textContent = "保存しました。次の提案から使います。"; renderKitchenHint(); }
+  catch { $("k-status").textContent = "保存できませんでした。もう一度試してください。"; }
+}
+
+/* ===== tabs, sign-in, boot ===== */
+function showTab(name) {
+  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
+  document.querySelectorAll("[data-view]").forEach(v => { v.hidden = v.dataset.view !== name; });
+  if (name === "usage") showPuterUsage();
+}
+async function enterApp() {
+  $("welcome").hidden = true; $("app").hidden = false; $("btn-out").hidden = false;
+  try { const u = await puter.auth.getUser(); $("who").textContent = u && u.username ? `${u.username} さん` : ""; } catch {}
+  await Promise.all([loadKitchen(), loadRecipes(), loadUsage()]);
+}
+function showWelcome(msg) {
+  $("app").hidden = true; $("welcome").hidden = false; $("btn-out").hidden = true; $("who").textContent = "";
+  $("welcome-status").textContent = msg || "";
+}
+
+$("s-cat").append(h("option", { value: "" }, "おまかせ"), ...CATS.map(c => h("option", { value: c }, c)));
+$("s-bud").append(...BUDGETS.map(([v, l]) => h("option", { value: v, selected: v === "300" }, l)));
+document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+$("s-go").addEventListener("click", suggest);
+$("k-save").addEventListener("click", saveKitchen);
+$("btn-in").addEventListener("click", async () => {
+  $("welcome-status").textContent = "Puter のログイン画面を開いています…";
+  try { await puter.auth.signIn(); await enterApp(); }
+  catch { $("welcome-status").textContent = "ログインできませんでした。ポップアップを許可して、もう一度押してください。"; }
+});
+$("btn-out").addEventListener("click", () => { try { puter.auth.signOut(); } catch {} showWelcome("ログアウトしました。"); });
+
+(async () => {
+  if (typeof window.puter === "undefined") { showWelcome("Puter を読み込めませんでした。通信状況を確かめて、ページを開き直してください。"); $("btn-in").disabled = true; return; }
+  try { if (puter.auth.isSignedIn()) { await enterApp(); return; } } catch {}
+  showWelcome("");
+})();
+</script>
+</body>
+</html>
