@@ -113,6 +113,8 @@ table.log th:first-child, table.log td:first-child { text-align: left; }
 dialog { border: 0; border-radius: 14px; padding: 0; width: min(640px, calc(100% - 24px)); max-height: calc(100% - 48px); background: var(--surface); color: var(--ink); }
 dialog::backdrop { background: rgba(10, 16, 12, .45); }
 .dlg { display: grid; gap: 14px; padding: 18px; }
+footer.ver { text-align: center; font-size: .75rem; color: var(--muted); padding: 8px 16px 24px; }
+footer.ver b { font-variant-numeric: tabular-nums; }
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 8px 18px; border-radius: 999px; font-size: .88rem; z-index: 30; }
 @media (max-width: 420px) { .stat b { font-size: 1.3rem; } .stat span { font-size: .72rem; } }
 </style>
@@ -120,7 +122,7 @@ dialog::backdrop { background: rgba(10, 16, 12, .45); }
 <body>
 <header>
   <div class="wrap">
-    <h1>うちのレシピ帳<small>β</small></h1>
+    <h1>うちのレシピ帳<small id="ver-badge">β</small></h1>
     <span class="who" id="who"></span>
     <button class="btn" id="btn-out" type="button" hidden>ログアウト</button>
   </div>
@@ -198,6 +200,8 @@ dialog::backdrop { background: rgba(10, 16, 12, .45); }
   </div>
 </div>
 
+<footer class="ver" id="ver-foot"></footer>
+
 <dialog id="dlg"><div class="dlg" id="dlg-body"></div></dialog>
 <div class="toast" id="toast" hidden></div>
 
@@ -205,6 +209,9 @@ dialog::backdrop { background: rgba(10, 16, 12, .45); }
 <script>
 "use strict";
 /* ===== settings ===== */
+// バージョン：更新するたびに上げる（公開した版が最新かを画面で確かめるため）
+const APP_VERSION = "0.4.0";
+const APP_DATE = "2026-11-20";
 const AI_MODEL = "claude-haiku-5-5";   // 節約モード固定（試験版）。Puter が受け付けないときは Puter の標準モデルで再試行する
 const CATS = ["主菜", "副菜", "汁物", "ご飯・麺", "作り置き", "おやつ"];
 const CAT_DEF = {
@@ -674,6 +681,8 @@ function renderCatChips() {
 renderCatChips();
 $("s-bud").append(...BUDGETS.map(([v, l]) => h("option", { value: v, selected: v === "300" }, l)));
 document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+$("ver-badge").textContent = `β ${APP_VERSION}`;
+$("ver-foot").append("うちのレシピ帳 β　バージョン ", h("b", {}, APP_VERSION), `（${APP_DATE} 更新）`);
 $("s-go").addEventListener("click", suggest);
 $("k-save").addEventListener("click", saveKitchen);
 $("b-add").addEventListener("click", () => openForm(null));
